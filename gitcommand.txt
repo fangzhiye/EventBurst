@@ -1,0 +1,4 @@
+git reset --hard HEAD^#回退上一版本
+git reflog #查看git的每次命令
+git reset --hard 1094a#回退到commint id为1094a
+git log#查看提交日志
