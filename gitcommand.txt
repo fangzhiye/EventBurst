@@ -2,3 +2,10 @@ git reset --hard HEAD^#回退上一版本
 git reflog #查看git的每次命令
 git reset --hard 1094a#回退到commint id为1094a
 git log#查看提交日志
+
+#git创建步骤
+1、github上创建项目
+2、git clone
+3、git add .
+4、git commit -m ""
+5、git push origin master

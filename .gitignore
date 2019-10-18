@@ -1,6 +1,7 @@
 #data
 data/mini_data_loc1hot_time1hot.csv
 data/*.csv
+*.npy
 
 #code#加/忽略整个文件夹
 hungarian/
