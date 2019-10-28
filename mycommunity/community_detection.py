@@ -16,6 +16,8 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 #为构图准备数据集
 #%%
+#使用mini数据
+'''
 project_path = "D:/EVENTBURST/data"
 file_path = os.path.join(project_path,"mini_data_loc1hot_time1hot.csv")#2015年至2016年举报数据
 df = pd.read_csv(file_path)
@@ -29,6 +31,23 @@ with open(os.path.join(project_path,'mini_time2idx.json'), 'r') as fp:#load json
     time2idx = json.load(fp)
     reversed_dates = dict(zip(time2idx.values(),time2idx.keys()))
 final_embeddings = np.load(os.path.join(project_path,'mini_simple_final_embeddings.npy'),allow_pickle = True)#为了计算方便每个emb的词都进行了归一化长度为1
+'''
+#使用所有数据
+project_path = "D:/EVENTBURST/data"
+file_path = os.path.join(project_path,"all_adv_dataseg_loc1hot_time1hot.csv")#2015年至2016年举报数据
+df = pd.read_csv(file_path)
+with open(os.path.join(project_path,'all_words2id.json'), 'r')as fp:#{key:id}
+    words2idx = json.load(fp)
+    reversed_words = dict(zip(words2idx.values(),words2idx.keys()))
+with open(os.path.join(project_path,'all_adv_grid_xy2idx.json'), 'r') as fp:#load json
+    grid_xy2idx = json.load(fp)
+    reversed_locs = dict(zip(grid_xy2idx.values(),grid_xy2idx.keys()))
+with open(os.path.join(project_path,'all_adv_time2idx.json'), 'r') as fp:#load json
+    time2idx = json.load(fp)
+    reversed_dates = dict(zip(time2idx.values(),time2idx.keys()))
+final_embeddings = np.load(os.path.join(project_path,'all_emb_word2vec_s128.npy'),allow_pickle = True)#为了计算方便每个emb的词都进行了归一化长度为1
+#%%
+df.head()
 #%%
 def time2timestamp(dt):
     global num_typeerror#使用全局变量
@@ -49,8 +68,8 @@ def timestamp2time(timestamp):
     dt = time.strftime("%Y-%m-%d %H:%M:%S",time_local)
     return dt
 #%%
-time_b = '2015/11/10 00:00:00'
-time_e = '2015/11/10 23:59:59'
+time_b = '2015/11/15 00:00:00'
+time_e = '2015/11/15 23:59:59'
 print("查询数据的起始时间是:{},查询的结速时间是:{}".format(time_b,time_e))
 q_b = time2timestamp(time_b)
 q_e = time2timestamp(time_e)
@@ -72,7 +91,7 @@ tfidf_word2id ={}
 for i,word in enumerate(word):
     tfidf_word2id[word] = i#{词:id}
 #%%
-ret['EMBEDDINGS'] = None
+#ret['EMBEDDINGS'] = None
 emb_temp = []
 for i in range(m):
     ks = set(keywords[i].split(" "))
@@ -91,8 +110,18 @@ for i in range(m):
     else:
         ksemb/=n#每条举报数据的embding是所有关键emb的均值
     emb_temp.append(ksemb)
-ret['EMBEDDINGS'] = emb_temp
+#ret['EMBEDDINGS'] = emb_temp
 emb_temp = np.array(emb_temp)
+emb_temp = [vec/np.linalg.norm(vec) for vec in emb_temp]
+emb_temp = np.array(emb_temp)#维度低点好像同一内容相似度更高
+#%%
+#test_sim
+test_num = 10
+test_emp = emb_temp[:test_num]
+testsim = np.matmul(test_emp,test_emp.transpose())
+print("test content is :{}".format(keywords[:test_num]))
+print("test sim is :\n")
+print(testsim)
 #%%
 #构建图的结点集合
 nodes = []
@@ -102,7 +131,8 @@ for i in range(m):
 sim = np.matmul(emb_temp,emb_temp.transpose())#计算文档与文档间的相似矩阵
 print(sim.shape)
 #T值越大划分的社区越多,社区内的类别越细
-T = 0.4#相似度的阈值,加了tf_idf权重后,相似性大于T的边减少了,阈值越大则边的数目越少,实验发现T大社区数目增多
+T = 0.85#相似度的阈值,加了tf_idf权重后,相似性大于T的边减少了,阈值越大则边的数目越少,实验发现T大社区数目增多
+#T越大 边越小 社区越多 社区内的类别也更准确
 print("边相似性的阈值是:{}".format(T))
 edges = []
 for i in range(m):
@@ -191,13 +221,13 @@ for item in comm_dict.items():
     if(rec>10):break
     Draw_Community(item[0],comm_dict,isdraw = False)
 #%%
-#保存时间帧community于一array中[{}]
+#保存发现的社区,保存时间帧community于一array中[{}]
 #{"community_id":社区划分后的id,"community_member":[社区成员],"member_degree":[成员的度数],"member_emb":[成员的embedding],"member_content":["社区内容"]}
 ret = []
 for item in comm_dict.items():
     if(len(item[1])<4):#社区内数目至少要4条
         continue
-    community_temp = {"community_id":-1,"community_member":[],"member_degree":[],"member_emb":[],"member_content":[]}
+    community_temp = {"community_id":-1,"frame_id":,"community_member":[],"member_degree":[],"member_emb":[],"member_content":[]}#因该增加frame_id 记录该事件是在第几帧
     community_temp["community_id"] = item[0]
     community_temp["community_member"] = item[1]
     degree_temp = []

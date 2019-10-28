@@ -5,7 +5,9 @@ data/*.csv
 
 #code#加/忽略整个文件夹
 hungarian/
+data/
 
 #img
 *.jpg
 *.png
+*.html
