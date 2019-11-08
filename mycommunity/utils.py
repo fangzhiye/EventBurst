@@ -23,5 +23,5 @@ def time2timestamp(dt):
         
 def timestamp2time(timestamp):
     time_local = time.localtime(timestamp)
-    dt = time.strftime("%Y-%m-%d %H:%M:%S",time_local)
+    dt = time.strftime("%Y/%m/%d %H:%M:%S",time_local)
     return dt
