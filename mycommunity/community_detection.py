@@ -296,32 +296,34 @@ class Community_Detecion:
 #%%
 #保存发现的社区,保存时间帧community于一array中[{}]
 #{"community_id":社区划分后的id,"community_member":[社区成员],"member_degree":[成员的度数],"member_emb":[成员的embedding],"member_content":["社区内容"]}
-    def get_events(self,ret_df,comm_dict,emb_temp,G,frame_id):
+    def get_events(self,ret_df,comm_dict,emb_temp,G,frame_id,min_docs = 4):
         m,n = ret_df.shape
         keywords = ret_df['KEY_WORDS']
         ret = []
         for item in comm_dict.items():
-            if(len(item[1])<2):#社区内数目至少要2条
+            #key 是com id
+            if(len(item[1])<min_docs):#社区内数目至少要2条
                 continue
             community_temp = {"community_id":item[0],"frame_id":frame_id,"community_member":item[1],"member_degree":[],"member_emb":[],"member_content":[]}#因该增加frame_id 记录该事件是在第几帧
             degree_temp = []
             for m in item[1]:
                 degree_temp.append(G.degree()[m])
             community_temp["member_degree"] = degree_temp
-            community_temp["member_emb"] = emb_temp[item[1]]
+            community_temp["member_emb"] = emb_temp[item[1]]#member的emb
             community_temp["member_content"] = keywords[item[1][:4]]
             ret.append(community_temp)
         return ret
         #date = time_b.split(" ")[0].split("/")[-1]
         #np.save(str(date)+".npy",np.array(ret))
 #%%
-    def detect_events(self,time_b,time_e,frame_id):
+    def detect_events(self,time_b,time_e,frame_id,min_docs):
         ret_df = self.get_querydata(time_b,time_e)#返回这一段时间内的数据
         emb_temp = self.make_docemb(ret_df)#图每个结点的表示
         G = self.make_graph(ret_df,emb_temp)#构图
         comm_dict,scores = self.graph_partition(G,ret_df)#社区发现
         self.show_events(ret_df,comm_dict,G)
-        ret = self.get_events(ret_df,comm_dict,emb_temp,G,frame_id)
+        ret = self.get_events(ret_df,comm_dict,emb_temp,G,frame_id,min_docs)
+        ret = np.array(ret)
         return ret #[{events1},{events2},{events3}...,{}]
         #keywords = ret_df['KEY_WORDS']
 #%%

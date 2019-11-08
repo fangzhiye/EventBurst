@@ -11,7 +11,7 @@ If it has more rows than columns, then not every row needs to be assigned to a c
 #是一array array里的元素是[{},{},{}]
 #{"community_id":社区划分后的id,"community_member":[社区成员],"member_degree":[成员的度数],"member_emb":[成员的embedding],"member_content":["社区内容"]}
 #frames = []
-#ret = {}
+#ret = {} #{frame_id + commid : [{comm1},{comm2},...]}
 #for i in range(10,16):
     #frames.append(np.load("./"+str(i)+".npy",allow_pickle=True))
 #left_frame = np.load("./14.npy", allow_pickle=True)
@@ -19,6 +19,7 @@ If it has more rows than columns, then not every row needs to be assigned to a c
 class Match_Events:
     def __init__(self):
         self.ret = {}
+        print("class match events")
         pass
     def get_commemb(self,frame):
         embs = []
@@ -28,24 +29,28 @@ class Match_Events:
             all_degree = sum(degree)
             degree = degree / all_degree
             w = np.expand_dims(degree,axis = 1)
-            emb *= w
-            embs.append(np.sum(emb,axis=0))
+            #emb *= w #按度数加权
+            emb /= len(degree)
+            embs.append(np.sum(emb,axis=0))#embe是事件里每条举报数据度数的加权和
         return np.array(embs)
 
-    def match_frames(self,left_frame,right_frame,frame_id,T=0.01):#前一帧为left_fram,后一帧为right_fram
+    def match_frames(self,left_frame,right_frame,frame_id,T=0.2):#前一帧为left_fram,后一帧为right_fram
         #T为相似度的阈值
         #frame_id 记录left是第几frame
         left_embs = self.get_commemb(left_frame)
         right_embs = self.get_commemb(right_frame)
+        left_embs = np.array([vec/np.linalg.norm(vec) for vec in left_embs])
+        right_embs = np.array([vec/np.linalg.norm(vec) for vec in right_embs])
         l = len(left_frame)
         r = len(right_frame)
         print("left frame communities : {}".format(l))
         print("right frame communities : {}".format(r))
+        #如果用cos计算sim 都要归一化
         sim = np.matmul(left_embs,right_embs.transpose())#如果行数小于列数则每行都会匹配到,否则每列都会匹配到
         for i in range(l):
             for j in range(r):
                 if(sim[i][j]<T):sim[i][j]=0
-        row_ind, col_ind = linear_sum_assignment(sim*-1)
+        row_ind, col_ind = linear_sum_assignment(sim*-1)#最大权值二部图匹配所有要*-号
         print(row_ind)
         print(col_ind)
         print(sim[row_ind, col_ind].sum())#因原算法是最小权值匹配所以要乘-1
@@ -76,19 +81,13 @@ class Match_Events:
             else:#匹配到旧事件
                 self.ret[old_key].append(comm_right)
                 self.ret[new_key] = self.ret.pop(old_key)
-#%%
-    def match_events(self,frames):
+
+    def maxweight_match(self,frames,min_t ):
         num_frames = len(frames)
         #key为"frame_id + endcomm_id":[{},{},{},"每个元素为事件"]
         for i in range(num_frames-1):
-            self.match_frames(frames[i],frames[i+1],i+10)
+            self.match_frames(frames[i],frames[i+1],i,T = min_t)
             print("############ new match begin #############")
         return self.ret
-
-#构早相似度矩阵
-#cost = np.array([[4.5, 1, 3], [2, 0, 5], [3, 2, 2],[9,0,1]]) * -1#
-
-
-
 #%%
 #每个.py文件其实都是一个模块,python在运行前会先在当前目录、PYTHONPATH、默认目录下搜索模块
