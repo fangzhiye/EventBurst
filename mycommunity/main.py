@@ -15,10 +15,10 @@ import numpy as np
 community_detecion = Community_Detecion()
 community_detecion.load_data()#加载数据
 #%%
-frame_b = "2015/11/10 00:00:00"
+frame_b = "2016/07/11 00:00:00"
 frames = []
 interval = 3600 *24 #每帧的间隔
-num_frames = 6
+num_frames = 10
 for i in tqdm(range(num_frames)):
     time_b = timestamp2time(time2timestamp(frame_b)+ (i)*interval)
     time_e = timestamp2time(time2timestamp(time_b)+ interval)
@@ -26,7 +26,7 @@ for i in tqdm(range(num_frames)):
     frames.append(frame)
 #%%
 match_events = Match_Events()
-ret = match_events.maxweight_match(frames,min_t = 0.2)#min_t指sim的最小值
+ret = match_events.maxweight_match(frames,min_t = 0.7)#min_t指sim的最小值
 #%%
 print(ret)
 

@@ -60,7 +60,7 @@ class Community_Detecion:
 #%%
     def get_labels(self):
         types = set(self.df['TYPE'])#确定labels的时候如果仅二级、三级以最后一级为label,如果四级以第三级为label
-        self.labels_dict = {} #{label:idx}是整个文件的所有label
+        self.labels_dict = {} #{label:idx}是整个文件的所有label,每个label给个idx
         for idx,key in enumerate(types):
             key_list = key.split("-")
             if(len(key_list)>3):
@@ -236,7 +236,7 @@ class Community_Detecion:
         num_comm = len(comm_dict)
         print("社区数目为:{}".format(num_comm))
 
-        labels_true = np.empty(shape=[m])#各条举报数据的label GT
+        self.labels_true = np.empty(shape=[m])#各条举报数据的label GT
         labels_pred = np.empty(shape=[m])#以同一community中多数的label为这一community的label
         ret_types = list(ret_df['TYPE'])
         for i,d_type in enumerate(ret_types):
@@ -246,8 +246,8 @@ class Community_Detecion:
             else:
                 key = key_list[-1]
             idx = self.labels_dict[key]
-            labels_true[i] = idx
-        labels_true = np.array(labels_true)
+            self.labels_true[i] = idx
+        self.labels_true = np.array(self.labels_true)
 
         '''
         #其实对于兰德系数和互信息并不要求给聚类的元素打label,而只要求他们原本是同一个类别现在聚成同一个簇就好了
@@ -263,9 +263,18 @@ class Community_Detecion:
             labels_pred[com_members] = np.random.randint(0,num_comm)#
             labels_pred[com_members] = com_id#同一个社区的文档预测的是同一个id
 
-        scores = self.Eva_Metric(labels_true,labels_pred)
+        scores = self.Eva_Metric(self.labels_true,labels_pred)
         print(scores)
         return comm_dict,scores 
+#%%
+    def get_commmetrics(self,comm_members):
+        #给定一个社区的成员计算acc recall and f1-score
+        members_labels = self.labels_true[comm_members]#获得该社区每个成员的label
+        comm_label = collections.Counter(members_labels).most_common()[0][0]#聚类成员最多的label为该社区的label
+        acc = collections.Counter(members_labels).most_common()[0][1]/len(comm_members)
+        recall = collections.Counter(members_labels).most_common()[0][1]/collections.Counter(self.labels_true)[comm_label]
+        f1_score = 2*acc*recall/(acc+recall)
+        return [acc,recall,f1_score]
 #%%
     def Draw_Community(self,comm,keywords,G,comm_dict,isdraw = False):
         G_comm = G.subgraph(comm_dict[comm]).copy()
@@ -304,12 +313,13 @@ class Community_Detecion:
             #key 是com id
             if(len(item[1])<min_docs):#社区内数目至少要2条
                 continue
-            community_temp = {"community_id":item[0],"frame_id":frame_id,"community_member":item[1],"member_degree":[],"member_emb":[],"member_content":[]}#因该增加frame_id 记录该事件是在第几帧
+            community_temp = {"community_id":item[0],"frame_id":frame_id,"community_metrics":[],"community_member":item[1],"member_degree":[],"member_emb":[],"member_content":[]}#因该增加frame_id 记录该事件是在第几帧
             degree_temp = []
             for m in item[1]:
                 degree_temp.append(G.degree()[m])
             community_temp["member_degree"] = degree_temp
             community_temp["member_emb"] = emb_temp[item[1]]#member的emb
+            community_temp["community_metrics"]=self.get_commmetrics(item[1])
             community_temp["member_content"] = keywords[item[1][:4]]
             ret.append(community_temp)
         return ret

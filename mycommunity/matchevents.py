@@ -29,8 +29,8 @@ class Match_Events:
             all_degree = sum(degree)
             degree = degree / all_degree
             w = np.expand_dims(degree,axis = 1)
-            #emb *= w #按度数加权
-            emb /= len(degree)
+            emb *= w #按度数加权
+            #emb /= len(degree) #均值
             embs.append(np.sum(emb,axis=0))#embe是事件里每条举报数据度数的加权和
         return np.array(embs)
 
@@ -62,14 +62,16 @@ class Match_Events:
             print("left 的id是:{},举报数目是:{},内容是:".format(match_left[i]["community_id"],len(match_left[i]["member_degree"])))
             print(match_left[i]["member_content"])
             comm_left["community_id"] = str(frame_id)+"_"+str(match_left[i]["community_id"])
-            comm_left["community_content"] = match_left[i]["member_content"]
             comm_left["community_docs"] = len(match_left[i]["member_degree"])
+            comm_left["community_metrics"] = match_left[i]["community_metrics"]
+            comm_left["community_content"] = match_left[i]["member_content"] 
             print("匹配的是：")
             print("right 的id是:{},举报数目是:{},内容是:".format(match_left[i]["community_id"],len(match_right[i]["member_degree"])))
             print(match_right[i]["member_content"])
             comm_right["community_id"] = str(frame_id+1)+"_"+str(match_right[i]["community_id"])
-            comm_right["community_content"] = match_right[i]["member_content"]
             comm_right["community_docs"] = len(match_right[i]["member_degree"])
+            comm_right["community_metrics"] = match_right[i]["community_metrics"]
+            comm_right["community_content"] = match_right[i]["member_content"]
             print("相似度为:{}".format(sim[row_ind[i]][col_ind[i]]))#如果相似度很低则不能匹配
             print("<------------------------------->")
             old_key = str(frame_id)+"_"+str(match_left[i]["community_id"])
