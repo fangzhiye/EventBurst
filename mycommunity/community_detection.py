@@ -69,6 +69,7 @@ class Community_Detecion:
                 key = key_list[-1]
             if(key not in self.labels_dict.keys()):
                 self.labels_dict[key] = idx
+        print("number of types : {}".format(len(self.labels_dict)))
         self.rev_labels_dict = {}
         for key,value in self.labels_dict.items():
             self.rev_labels_dict[value] = key
@@ -307,8 +308,14 @@ class Community_Detecion:
 #{"community_id":社区划分后的id,"community_member":[社区成员],"member_degree":[成员的度数],"member_emb":[成员的embedding],"member_content":["社区内容"]}
     def get_events(self,ret_df,comm_dict,emb_temp,G,frame_id,min_docs = 4):
         m,n = ret_df.shape
-        keywords = ret_df['KEY_WORDS']
+        keywords = np.array((ret_df['KEY_WORDS']))
+        types = np.array((ret_df['TYPE']))
+        dates = np.array((ret_df['DATE']))
+        contents = np.array(ret_df['CONTENT'])
+        lats = np.array(ret_df['LATITUDE'])
+        lons = np.array(ret_df['LONGITUDE'])
         ret = []
+        print("类别数目是:{}".format(len(set(types))))
         for item in comm_dict.items():
             #key 是com id
             if(len(item[1])<min_docs):#社区内数目至少要2条
@@ -320,7 +327,11 @@ class Community_Detecion:
             community_temp["member_degree"] = degree_temp
             community_temp["member_emb"] = emb_temp[item[1]]#member的emb
             community_temp["community_metrics"]=self.get_commmetrics(item[1])
-            community_temp["member_content"] = keywords[item[1][:4]]
+            community_temp["member_content"] = keywords[item[1][:4]]#在这获得检测到的事件内容
+            community_temp['community_types'] = types[item[1]]
+            community_temp['community_dates'] = dates[item[1]]
+            community_temp['community_lats'] = lats[item[1]]
+            community_temp['community_lons'] = lons[item[1]]
             ret.append(community_temp)
         return ret
         #date = time_b.split(" ")[0].split("/")[-1]

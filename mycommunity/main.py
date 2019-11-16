@@ -15,10 +15,14 @@ import numpy as np
 community_detecion = Community_Detecion()
 community_detecion.load_data()#加载数据
 #%%
-frame_b = "2016/07/11 00:00:00"
+import gc
+gc.collect()
+frame_b = "2017/11/01 00:00:00"
+print("query_date_begin:{}".format(frame_b))
 frames = []
 interval = 3600 *24 #每帧的间隔
 num_frames = 10
+print("query_date_end:{}".format(timestamp2time(time2timestamp(frame_b)+ (num_frames)*interval)))
 for i in tqdm(range(num_frames)):
     time_b = timestamp2time(time2timestamp(frame_b)+ (i)*interval)
     time_e = timestamp2time(time2timestamp(time_b)+ interval)
@@ -26,8 +30,22 @@ for i in tqdm(range(num_frames)):
     frames.append(frame)
 #%%
 match_events = Match_Events()
-ret = match_events.maxweight_match(frames,min_t = 0.7)#min_t指sim的最小值
-#%%
-print(ret)
+ret = match_events.maxweight_match(frames,matrix_t = 0.7,events_t = 0.5)#min_t指sim的最小值
+# %%
+print(ret.keys())
+# %%
+print(ret["9_3"])
+events_chain = ret['9_3']
+docs = []
+acc = []
+recall = []
+for i in events_chain:
+    docs.append(i['community_docs'])
+    acc.append(i['community_metrics'][0])
+    recall.append(i['community_metrics'][1])
+# %%
+print(ret["9_3"])
+
+
 
 # %%

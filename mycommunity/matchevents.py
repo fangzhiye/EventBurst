@@ -34,12 +34,13 @@ class Match_Events:
             embs.append(np.sum(emb,axis=0))#embe是事件里每条举报数据度数的加权和
         return np.array(embs)
 
-    def match_frames(self,left_frame,right_frame,frame_id,T=0.2):#前一帧为left_fram,后一帧为right_fram
+    def match_frames(self,left_frame,right_frame,frame_id,matrix_t=0.2,events_t = 0.8):#前一帧为left_fram,后一帧为right_fram
         #T为相似度的阈值
         #frame_id 记录left是第几frame
+        #
         left_embs = self.get_commemb(left_frame)
         right_embs = self.get_commemb(right_frame)
-        left_embs = np.array([vec/np.linalg.norm(vec) for vec in left_embs])
+        left_embs = np.array([vec/np.linalg.norm(vec) for vec in left_embs])#归一化比较相似度
         right_embs = np.array([vec/np.linalg.norm(vec) for vec in right_embs])
         l = len(left_frame)
         r = len(right_frame)
@@ -49,7 +50,7 @@ class Match_Events:
         sim = np.matmul(left_embs,right_embs.transpose())#如果行数小于列数则每行都会匹配到,否则每列都会匹配到
         for i in range(l):
             for j in range(r):
-                if(sim[i][j]<T):sim[i][j]=0
+                if(sim[i][j]<matrix_t):sim[i][j]=0
         row_ind, col_ind = linear_sum_assignment(sim*-1)#最大权值二部图匹配所有要*-号
         print(row_ind)
         print(col_ind)
@@ -61,34 +62,47 @@ class Match_Events:
             comm_right = {}
             print("left 的id是:{},举报数目是:{},内容是:".format(match_left[i]["community_id"],len(match_left[i]["member_degree"])))
             print(match_left[i]["member_content"])
-            comm_left["community_id"] = str(frame_id)+"_"+str(match_left[i]["community_id"])
             comm_left["community_docs"] = len(match_left[i]["member_degree"])
+            comm_left["community_content"] = match_left[i]["member_content"]
             comm_left["community_metrics"] = match_left[i]["community_metrics"]
-            comm_left["community_content"] = match_left[i]["member_content"] 
+            comm_left["community_types"] = match_left[i]["community_types"]
+            comm_left["community_frameid"] = frame_id
             print("匹配的是：")
-            print("right 的id是:{},举报数目是:{},内容是:".format(match_left[i]["community_id"],len(match_right[i]["member_degree"])))
+            print("right 的id是:{},举报数目是:{},内容是:".format(match_right[i]["community_id"],len(match_right[i]["member_degree"])))
             print(match_right[i]["member_content"])
-            comm_right["community_id"] = str(frame_id+1)+"_"+str(match_right[i]["community_id"])
             comm_right["community_docs"] = len(match_right[i]["member_degree"])
-            comm_right["community_metrics"] = match_right[i]["community_metrics"]
             comm_right["community_content"] = match_right[i]["member_content"]
+            comm_right["community_metrics"] = match_right[i]["community_metrics"]
+            comm_right["community_types"] = match_right[i]["community_types"]
+            comm_right["community_frameid"] = frame_id+1
             print("相似度为:{}".format(sim[row_ind[i]][col_ind[i]]))#如果相似度很低则不能匹配
-            print("<------------------------------->")
+            print("<%%%%%%%%%%%%%%%%%%%>")
             old_key = str(frame_id)+"_"+str(match_left[i]["community_id"])
             new_key = str(frame_id+1)+"_"+str(match_right[i]["community_id"])#匹配为p-q,其中q为key，事件链的终点
-            if(old_key not in self.ret.keys()):#新事件的开始
-                self.ret[new_key] = []
-                self.ret[new_key].append(comm_left)
-                self.ret[new_key].append(comm_right)
-            else:#匹配到旧事件
-                self.ret[old_key].append(comm_right)
-                self.ret[new_key] = self.ret.pop(old_key)
+            if(sim[row_ind[i]][col_ind[i]] < events_t):#如果事件链间事件的相似性少于阈值则是旧事件的结束或新事件的开始
+                if(old_key not in self.ret.keys()):#新事件的开始
+                    self.ret[new_key] = []
+                    self.ret[old_key] = []
+                    self.ret[old_key].append(comm_left) #分别为一个事件结束和一新事件的开始
+                    self.ret[new_key].append(comm_right)
+                else:
+                    self.ret[new_key] = []
+                    self.ret[new_key].append(comm_right)
+            else:
+                if(old_key not in self.ret.keys()):#新事件的开始
+                    self.ret[new_key] = []
+                    self.ret[new_key].append(comm_left)
+                    self.ret[new_key].append(comm_right)
+                else:#匹配到旧事件
+                    self.ret[old_key].append(comm_right)
+                    self.ret[new_key] = self.ret.pop(old_key)
+        #每个key都是一事件链,key值是事件链的 "frame_commid"
 
-    def maxweight_match(self,frames,min_t ):
+    def maxweight_match(self,frames,matrix_t,events_t ):
         num_frames = len(frames)
         #key为"frame_id + endcomm_id":[{},{},{},"每个元素为事件"]
         for i in range(num_frames-1):
-            self.match_frames(frames[i],frames[i+1],i,T = min_t)
+            self.match_frames(frames[i],frames[i+1],i,matrix_t,events_t)
             print("############ new match begin #############")
         return self.ret
 #%%
