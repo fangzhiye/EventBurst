@@ -17,12 +17,15 @@ If it has more rows than columns, then not every row needs to be assigned to a c
 #left_frame = np.load("./14.npy", allow_pickle=True)
 #right_frame = np.load("./15.npy",allow_pickle=True)
 class Match_Events:
-    def __init__(self):
+    def __init__(self,embeddings,words2idx):
         self.ret = {}
+        self.embeddings = embeddings
+        self.words2idx = words2idx
         print("class match events")
         pass
     def get_commemb(self,frame):
-        embs = []
+        embs_frame = []
+        '''
         for comm in frame:
             degree = np.array(comm['member_degree'])
             emb = comm['member_emb']
@@ -32,13 +35,34 @@ class Match_Events:
             emb *= w #按度数加权
             #emb /= len(degree) #均值
             embs.append(np.sum(emb,axis=0))#embe是事件里每条举报数据度数的加权和
-        return np.array(embs)
+        '''
+        for comm in frame:#所有关键词的均值
+            embs = np.zeros(128)
+            keywords = np.array(comm['community_keywords'])#[['','','']]每个元素都是一个comm
+            comm_words = []
+            for keyword in keywords:
+                for i in keyword.split(" "):
+                    comm_words.append(i)
+            comm_words = set(comm_words)
+            n=0
+            for word in comm_words:
+                try:
+                    emb = self.embeddings[self.words2idx[word]]
+                    n+=1
+                except:
+                    emb = np.zeros(128)
+                embs+=emb
+            if(n!=0):
+                embs/=n
+            embs_frame.append(embs)
+        return np.array(embs_frame)
 
     def match_frames(self,left_frame,right_frame,frame_id,matrix_t=0.2,events_t = 0.8):#前一帧为left_fram,后一帧为right_fram
         #T为相似度的阈值
         #frame_id 记录left是第几frame
         #
         left_embs = self.get_commemb(left_frame)
+        #print(left_embs)
         right_embs = self.get_commemb(right_frame)
         left_embs = np.array([vec/np.linalg.norm(vec) for vec in left_embs])#归一化比较相似度
         right_embs = np.array([vec/np.linalg.norm(vec) for vec in right_embs])

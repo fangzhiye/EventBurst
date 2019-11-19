@@ -117,9 +117,7 @@ class Community_Detecion:
                 except:
                     emb = np.zeros(128)
                 ksemb += emb  
-            if(n==0):
-                ksemb = np.zeros(128)
-            else:
+            if(n!=0):
                 ksemb/=n#每条举报数据的embding是所有关键emb的均值
             emb_temp.append(ksemb)
         emb_temp = np.array(emb_temp)
@@ -332,6 +330,7 @@ class Community_Detecion:
             community_temp['community_dates'] = dates[item[1]]
             community_temp['community_lats'] = lats[item[1]]
             community_temp['community_lons'] = lons[item[1]]
+            community_temp['community_keywords'] = keywords[item[1]]#该comm里每条举报的keywords
             ret.append(community_temp)
         return ret
         #date = time_b.split(" ")[0].split("/")[-1]
