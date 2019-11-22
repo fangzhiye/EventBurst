@@ -43,7 +43,7 @@ class Match_Events:
             for keyword in keywords:
                 for i in keyword.split(" "):
                     comm_words.append(i)
-            comm_words = set(comm_words)
+            comm_words = comm_words#不要set 应该是按词频
             n=0
             for word in comm_words:
                 try:
@@ -56,6 +56,18 @@ class Match_Events:
                 embs/=n
             embs_frame.append(embs)
         return np.array(embs_frame)
+
+    def get_weight_commemb(self,left_frame,right_frame):
+
+        for comm in left_frame:
+            pass
+            #每条doc都是一n维的0,1向量 每个维度出现这个词为1否则为0
+            #两条文本都出现这个词的话权重比另一个词高
+            #如doc1 [0 0 1 1 0 1]
+            #  doc2 [0 1 1 0 1 1]
+            # weight[1 1 2 1 1 2]即如果两doc都有该词权重为2 否则为1
+            # 小蓝单车 退押金
+            # 小蓝单车 退款
 
     def match_frames(self,left_frame,right_frame,frame_id,matrix_t=0.2,events_t = 0.8):#前一帧为left_fram,后一帧为right_fram
         #T为相似度的阈值

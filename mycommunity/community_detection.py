@@ -81,6 +81,7 @@ class Community_Detecion:
         q_b = time2timestamp(time_b)
         q_e = time2timestamp(time_e)
         ret_df = self.df[(self.df['TIMESTAMP'] >q_b) & (self.df['TIMESTAMP'] < q_e)]
+
         ret_df = ret_df.reset_index(drop = True)
         m,n = ret_df.shape
         print("查询数据的行数为:{},查询数据的列数为:{}".format(m,n))
@@ -106,7 +107,7 @@ class Community_Detecion:
         keywords = ret_df['KEY_WORDS']
         emb_temp = []
         for i in range(m):
-            ks = set(keywords[i].split(" "))
+            ks = keywords[i].split(" ")
             ksemb = np.zeros(128)
             n = 0
             for k in ks:

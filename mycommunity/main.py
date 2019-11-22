@@ -20,8 +20,8 @@ gc.collect()
 frame_b = "2016/07/10 00:00:00"
 print("query_date_begin:{}".format(frame_b))
 frames = []
-interval = 3600 *24 #每帧的间隔
-num_frames = 11
+interval = 3600 *24*10 #每帧的间隔
+num_frames = 1
 print("query_date_end:{}".format(timestamp2time(time2timestamp(frame_b)+ (num_frames)*interval)))
 for i in tqdm(range(num_frames)):
     time_b = timestamp2time(time2timestamp(frame_b)+ (i)*interval)
@@ -32,10 +32,11 @@ for i in tqdm(range(num_frames)):
 match_events = Match_Events(community_detecion.final_embeddings,community_detecion.words2idx)
 ret = match_events.maxweight_match(frames,matrix_t = 0.7,events_t = 0.7)#min_t指sim的最小值
 # %%
+gc.collect()
 print(ret.keys())
 # %%
-print(ret["9_3"])
-events_chain = ret['9_3']
+print(ret["9_0"])
+events_chain = ret['9_0']
 docs = []
 acc = []
 recall = []
@@ -44,7 +45,7 @@ for i in events_chain:
     acc.append(i['community_metrics'][0])
     recall.append(i['community_metrics'][1])
 # %%
-print(ret["10_2"])
+print(ret["9_6"])
 
 
 
