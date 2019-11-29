@@ -8,7 +8,7 @@ from django.http import HttpResponse
 CurrentConfig.GLOBAL_ENV = Environment(loader=FileSystemLoader("./demo/templates"))
 
 from pyecharts import options as opts
-from pyecharts.charts import Page, ThemeRiver, Bar, Map, Geo, Grid, Line, Scatter, Timeline,WordCloud
+from pyecharts.charts import Page, ThemeRiver, Bar, Map, Geo, Grid, Line, Scatter, Timeline,WordCloud, BMap
 from pyecharts.faker import Collector, Faker
 
 from pyecharts.components import Table
@@ -160,7 +160,7 @@ def get_line():
         
         .add_yaxis("商家B", Faker.values())
         .set_global_opts(
-            title_opts=opts.TitleOpts(title="天津政府服务热线数目", pos_right="center"),
+            title_opts=opts.TitleOpts(title="天津政府服务热线数目变化", pos_right="center"),
             legend_opts=opts.LegendOpts(is_show=False),
             #legend_opts=opts.LegendOpts(pos_top="20%"),
             datazoom_opts=opts.DataZoomOpts(),
@@ -169,20 +169,53 @@ def get_line():
     )
     
     return line
+
+
+
+def get_bmap(message) -> BMap:
+    BAIDU_AK = "HOTBRAfU1jGcQKHBX15ucKsfZO722eyN"
+    pos = (117.20, 39.12)
+    c = (
+        BMap()
+        .add_schema(
+            baidu_ak=BAIDU_AK,
+            center=[117.20, 39.12],
+            zoom = 10
+        )
+        .add_coordinate("测试点", pos[0],pos[1])
+        .add(
+            "测试点",[("测试点", 51)],type_="effectScatter",
+            label_opts=opts.LabelOpts(formatter="{b}"),
+        )
+        .set_series_opts(effect_opts=opts.EffectOpts(is_show=True),
+                        label_opts=opts.LabelOpts(is_show=False))
+        .add_control_panel(
+            scale_control_opts=opts.BMapScaleControlOpts(),
+            navigation_control_opts=opts.BMapNavigationControlOpts(),
+            maptype_control_opts=opts.BMapTypeControlOpts(),
+            #copyright_control_opts=opts.BMapCopyrightTypeOpts(copyright_="我的")
+            #geo_location_control_opts=opts.BMapGeoLocationControlOpts()
+            #overview_map_opts=opts.BMapOverviewMapControlOpts(is_open=True),
+        )
+        #.set_global_opts(title_opts=opts.TitleOpts(title="BMap-基本示例"))
+    )
+    return c
+
 def get_mymap(message) -> Geo:
     pos = (117.20, 39.12)
     tianjing_map = (
          Geo()
-        .add_schema(maptype="天津")
+        .add_schema(maptype="北京")
         # 加入自定义的点，格式为
         .add_coordinate("测试点", pos[0],pos[1])
+        #.add_coordinate_json("./demo/coord.json")
         # 为自定义的点添加属性
         .add("测试点",[("测试点", 51)],type_="effectScatter")
         #.set_series_opts()
         .set_series_opts(label_opts=opts.LabelOpts(is_show=False),
                          effect_opts=opts.EffectOpts(is_show=True))
         .set_global_opts(title_opts=opts.TitleOpts(title=message,pos_right="center"),
-                        legend_opts=opts.LegendOpts(is_show=False))
+                        )
     )
     return tianjing_map
 
@@ -201,8 +234,9 @@ def event_chain(request):
         message = '天津市地图'
 
     page = Page(layout=Page.DraggablePageLayout)
-    mymap = get_mymap(message)
-    mymap.chart_id = "map_1"
+    mymap = get_bmap(message)
+    #mymap = get_mymap(message)
+    mymap.chart_id = "bmap_1"
     myline = get_line()
     myline.chart_id = "line_1"
     mythemeriver = get_themeriver()
@@ -229,6 +263,35 @@ def get_eventmap(message) -> Geo:
         .set_global_opts(title_opts=opts.TitleOpts(title=message,pos_right="center"),legend_opts=opts.LegendOpts(is_show=False))
     )
     return tianjing_map
+
+def get_eventbmap(message) -> BMap:
+    BAIDU_AK = "HOTBRAfU1jGcQKHBX15ucKsfZO722eyN"
+    pos = (117.20, 39.12)
+    c = (
+        BMap()
+        .add_schema(
+            baidu_ak=BAIDU_AK,
+            center=[117.20, 39.12],
+            zoom = 10
+        )
+        .add_coordinate("测试点", pos[0],pos[1])
+        .add(
+            "测试点",[("测试点", 51)],type_="effectScatter",
+            label_opts=opts.LabelOpts(formatter="{b}"),
+        )
+        .set_series_opts(effect_opts=opts.EffectOpts(is_show=True),
+                        label_opts=opts.LabelOpts(is_show=False))
+        .add_control_panel(
+            scale_control_opts=opts.BMapScaleControlOpts(),
+            navigation_control_opts=opts.BMapNavigationControlOpts(),
+            maptype_control_opts=opts.BMapTypeControlOpts(),
+            #copyright_control_opts=opts.BMapCopyrightTypeOpts(copyright_="我的")
+            #geo_location_control_opts=opts.BMapGeoLocationControlOpts()
+            #overview_map_opts=opts.BMapOverviewMapControlOpts(is_open=True),
+        )
+        #.set_global_opts(title_opts=opts.TitleOpts(title="BMap-基本示例"))
+    )
+    return c
 
 def get_eventline():
     line = (
@@ -302,7 +365,7 @@ def get_wordcloud_line()->Line:
 
 def event(request):
     page = Page(layout=Page.DraggablePageLayout)
-    eventmap = get_eventmap(message="天津市地图")
+    eventmap = get_eventbmap(message="天津市地图")
     eventmap.chart_id = "map_event"
     eventline = get_eventline()
     eventline.chart_id = "line_event"
