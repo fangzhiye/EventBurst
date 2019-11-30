@@ -13,6 +13,7 @@ from pyecharts.faker import Collector, Faker
 
 from pyecharts.components import Table
 from pyecharts.options import ComponentTitleOpts
+import os
 
 def index(request):
     request.encoding='utf-8'
@@ -180,7 +181,8 @@ def get_bmap(message) -> BMap:
         .add_schema(
             baidu_ak=BAIDU_AK,
             center=[117.20, 39.12],
-            zoom = 10
+            zoom = 10,
+            is_roam=False
         )
         .add_coordinate("测试点", pos[0],pos[1])
         .add(
@@ -205,7 +207,7 @@ def get_mymap(message) -> Geo:
     pos = (117.20, 39.12)
     tianjing_map = (
          Geo()
-        .add_schema(maptype="北京")
+        .add_schema(maptype="北京",is_roam=False)
         # 加入自定义的点，格式为
         .add_coordinate("测试点", pos[0],pos[1])
         #.add_coordinate_json("./demo/coord.json")
@@ -379,11 +381,53 @@ def event(request):
     page.add(eventtable)
     page.render(path="event.html",template_name="simple_page_event.html")
     Page.save_resize_html("event.html", cfg_file="./demo/chart_config_event.json", dest="./demo/templates/my_event_charts.html")
-    return render(request,"my_event_charts.html")
+    #page.render("bmap.html",template="simple_page_event.html")
+    return render(request,"my_event_charts.html")#可以向模板中填充数据来显示矩形框
     #return HttpResponse(page.render_embed(template_name="simple_page_event.html"))
 
 
+def get_gridbmap(message) -> BMap:
+    BAIDU_AK = "HOTBRAfU1jGcQKHBX15ucKsfZO722eyN"
+    pos = (117.20, 39.12)
+    #jscode = "console.log('hi hi');"#可嵌入jscode
+    #jscode = "functions(param){bmap.addEventListener('click', function(e){alert(e.point.lng + ','+ e.point.lat);});}"
+    #每两个点画一条线
+    j = [[{"coord":[117.20, 39.12]},{"coord":[118.21, 41.12]}],[{"coord":[119.21, 41.12]},{"coord":[115.21, 41.12]}]]
+    c = (
+        BMap()
+        .add_schema(
+            baidu_ak=BAIDU_AK,
+            center=[117.20, 39.12],
+            zoom = 12
+        )
+        .add(
+            "",
+            type_="lines",
+            data_pair=j,
+            is_polyline=True,
+            is_large=False,
+            linestyle_opts=opts.LineStyleOpts(color="purple", opacity=0.6, width=1),
+        )
+        .set_series_opts(effect_opts=opts.EffectOpts(is_show=False),
+                        label_opts=opts.LabelOpts(is_show=False))
+        .add_control_panel(
+            scale_control_opts=opts.BMapScaleControlOpts(),
+            navigation_control_opts=opts.BMapNavigationControlOpts(),
+            maptype_control_opts=opts.BMapTypeControlOpts(),
+            #copyright_control_opts=opts.BMapCopyrightTypeOpts(copyright_="我的")
+            #geo_location_control_opts=opts.BMapGeoLocationControlOpts()
+            #overview_map_opts=opts.BMapOverviewMapControlOpts(is_open=True),
+        )
+        #.add_js_funcs(jscode)
+        #.set_global_opts(title_opts=opts.TitleOpts(title="BMap-基本示例"))
+    )
+    return c
 
 def test(request):
-    scatter = get_scatter()
-    return HttpResponse(scatter.render_embed())
+    #scatter = get_scatter()
+    eventmap = get_gridbmap(message="天津市地图")
+    eventmap.chart_id = 'bmap_test'
+    
+    eventmap.render("bmap.html")
+    #print(eventmap.bmap_js_functions)
+    return HttpResponse(eventmap.render_embed())
