@@ -1,5 +1,6 @@
 from django.shortcuts import render
-
+import numpy as np
+import collections
 # Create your views here.
 from jinja2 import Environment, FileSystemLoader
 from pyecharts.globals import CurrentConfig, SymbolType
@@ -14,6 +15,11 @@ from pyecharts.faker import Collector, Faker
 from pyecharts.components import Table
 from pyecharts.options import ComponentTitleOpts
 import os
+import sys
+#sys.path.append("..")
+from mycommunity.process import Process
+#print(sys.path)
+process = Process()
 
 def index(request):
     request.encoding='utf-8'
@@ -56,7 +62,8 @@ def get_scatter() -> Scatter:
         
     )
     return scatter
-def get_themeriver():
+def get_themeriver(data,lengend):
+    '''
     data = [
         ["2015/11/08", 10, "DQ"],
         ["2015/11/09", 15, "DQ"],
@@ -138,33 +145,49 @@ def get_themeriver():
         ["2015/11/19", 32, "DD"],
         ["2015/11/20", 26, "DD"],
     ]
+    '''
     themeriver = (
         ThemeRiver()
         .add(
-            ["DQ", "TY", "SS", "QG", "SY", "DD"],
+            #["DQ", "TY", "SS", "QG", "SY", "DD"],
+            lengend,
             data,
-            singleaxis_opts=opts.SingleAxisOpts(type_="time", pos_bottom="70%"),#可以通过调整坐标轴来调整图的位置
+            singleaxis_opts=opts.SingleAxisOpts( pos_bottom="50%",min_=1),#可以通过调整坐标轴来调整图的位置
             label_opts = opts.LabelOpts(is_show=False)
         )
         .set_global_opts(title_opts=opts.TitleOpts(title="事件链"),
-                        legend_opts=opts.LegendOpts(type_ = 'scroll',pos_left="4%",pos_bottom='40%',orient='vertical'))
+                         tooltip_opts=opts.TooltipOpts(is_show=True,trigger_on="mousemove|click"),
+                         legend_opts=opts.LegendOpts(type_ = 'scroll',pos_left="5%",orient='vertical',pos_top="55%"))
                         #datazoom_opts=opts.DataZoomOpts())#图例设置
                         
     )
     return themeriver
 
-def get_line():
+def get_line(line_data):
+    print(Faker.values())
+    print(Faker.choose())
+    x = line_data['x']
+    y = line_data['y']
     line = (
         Line()
-        .add_xaxis(Faker.choose())
+        .add_xaxis(x)
         #.add_yaxis("商家A", Faker.values())
-        
-        .add_yaxis("商家B", Faker.values())
+        .add_yaxis(
+            "举报数目", y,
+            markline_opts=opts.MarkLineOpts(data=[opts.MarkLineItem(type_="average")]),
+            )
         .set_global_opts(
-            title_opts=opts.TitleOpts(title="天津政府服务热线数目变化", pos_right="center"),
+            xaxis_opts=opts.AxisOpts(name="帧数",splitarea_opts=opts.SplitLineOpts(is_show=True)),
+            yaxis_opts=opts.AxisOpts(
+                name="举报数目",
+                splitline_opts=opts.SplitLineOpts(is_show=True),
+                is_scale=True,
+            ),
+            #title_opts=opts.TitleOpts(title="天津政府服务热线数目变化", pos_right="center"),
             legend_opts=opts.LegendOpts(is_show=False),
             #legend_opts=opts.LegendOpts(pos_top="20%"),
-            datazoom_opts=opts.DataZoomOpts(),
+            datazoom_opts=opts.DataZoomOpts(range_start=0,range_end=100),
+            #xaxis_opts=opts.AxisOpts(type_="value")#经轴是数值value
             #toolbox_opts=opts.ToolboxOpts(orient='vertical',pos_right="right")
         )
     )
@@ -221,6 +244,47 @@ def get_mymap(message) -> Geo:
     )
     return tianjing_map
 
+def process_data(frames,chains):
+    #frames[[{event1},{event2}],[{event1},{event2}]]
+    #chain{"key":[{event1}->{event2}->{event2}]}
+    line_data = {'x':[],'y':[]}#画折线图只要x轴和y轴的数据
+    themeriver_data =[]       #[["第i帧数",事件链在第i帧举报数目,"事件链关键词"]]
+    themreiver_lengend = []
+    idx = 1
+    for i in range(len(frames)):
+        frame = frames[i]
+        line_data['x'].append(str(i+1))#帧的序号,x轴是str类型
+        y = 0
+        for e in frame:
+            y+=len(e)
+        line_data['y'].append(y)#每帧的举报数目
+    #print(chains)
+    for k,v in chains.items():
+        chain = v#[{},{},{}] ...
+        abstract = " "+str(idx)+" "  #每条事件链的摘要
+        idx+=1
+        temp = []
+        for e in chain:#事件链上的每个结点
+            keywords = e["community_keywords"]#array["","",""]
+            for k in keywords:
+                for w in k.split(" "):
+                    temp.append(w)
+        C = np.array(collections.Counter(temp).most_common())#[("word":num)]
+        if(len(C)<20):
+            e = len(C)
+        else:
+            e = 20
+        for i in range(e):
+            abstract+=C[i][0]
+            abstract+=" "#事件链的摘要
+        themreiver_lengend.append(abstract)
+        for e in chain:
+            frame_id = str(e["community_frameid"]+1)
+            num_docs = e["community_docs"]
+            themeriver_data.append([frame_id,num_docs,abstract])
+    #print(themreiver_lengend)
+    return line_data,themeriver_data,themreiver_lengend
+
 def event_chain(request):
     '''
     grid = (
@@ -234,14 +298,18 @@ def event_chain(request):
         message = '你搜索的内容为: ' + request.GET['date_begin']
     else:
         message = '天津市地图'
-
+    frames = process.detect("2015/11/05 00:00:00",3600*24,10)
+    #line_data = frames
+    chains = process.match(frames)
+    #print(chain)
+    line_data,themeriver_data,themeriver_lengend = process_data(frames,chains)
     page = Page(layout=Page.DraggablePageLayout)
     mymap = get_bmap(message)
     #mymap = get_mymap(message)
     mymap.chart_id = "bmap_1"
-    myline = get_line()
+    myline = get_line(line_data)
     myline.chart_id = "line_1"
-    mythemeriver = get_themeriver()
+    mythemeriver = get_themeriver(themeriver_data,themeriver_lengend)
     mythemeriver.chart_id = "themeriver_1"
     # 需要自行调整每个 chart 的 height/width，显示效果在不同的显示器上可能不同
     page.add(mymap)

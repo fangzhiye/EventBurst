@@ -102,6 +102,7 @@ class Match_Events:
             comm_left["community_content"] = match_left[i]["member_content"]
             comm_left["community_metrics"] = match_left[i]["community_metrics"]
             comm_left["community_types"] = match_left[i]["community_types"]
+            comm_left["community_keywords"] = match_left[i]["community_keywords"]
             comm_left["community_frameid"] = frame_id
             print("匹配的是：")
             print("right 的id是:{},举报数目是:{},内容是:".format(match_right[i]["community_id"],len(match_right[i]["member_degree"])))
@@ -110,6 +111,7 @@ class Match_Events:
             comm_right["community_content"] = match_right[i]["member_content"]
             comm_right["community_metrics"] = match_right[i]["community_metrics"]
             comm_right["community_types"] = match_right[i]["community_types"]
+            comm_right["community_keywords"] = match_right[i]["community_keywords"]
             comm_right["community_frameid"] = frame_id+1
             print("相似度为:{}".format(sim[row_ind[i]][col_ind[i]]))#如果相似度很低则不能匹配
             print("<%%%%%%%%%%%%%%%%%%%>")

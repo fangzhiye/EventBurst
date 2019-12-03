@@ -16,7 +16,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn import metrics
 import collections
-from utils import time2timestamp ,timestamp2time
+from .utils import time2timestamp ,timestamp2time#这里指从当前包引入utils
 #为构图准备数据集
 #%%
 #使用mini数据
