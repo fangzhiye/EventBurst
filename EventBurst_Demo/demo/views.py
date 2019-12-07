@@ -195,35 +195,43 @@ def get_line(line_data):
     return line
 
 
-
-def get_bmap(message) -> BMap:
+def get_bmap(pos) -> BMap:
     BAIDU_AK = "HOTBRAfU1jGcQKHBX15ucKsfZO722eyN"
-    pos = (117.20, 39.12)
-    c = (
-        BMap()
-        .add_schema(
+    center = (117.20, 39.12)
+    c = BMap()
+    c.add_schema(
             baidu_ak=BAIDU_AK,
             center=[117.20, 39.12],
             zoom = 10,
             is_roam=False
-        )
-        .add_coordinate("测试点", pos[0],pos[1])
-        .add(
-            "测试点",[("测试点", 51)],type_="effectScatter",
-            label_opts=opts.LabelOpts(formatter="{b}"),
-        )
-        .set_series_opts(effect_opts=opts.EffectOpts(is_show=True),
-                        label_opts=opts.LabelOpts(is_show=False))
-        .add_control_panel(
-            scale_control_opts=opts.BMapScaleControlOpts(),
-            navigation_control_opts=opts.BMapNavigationControlOpts(),
-            maptype_control_opts=opts.BMapTypeControlOpts(),
-            #copyright_control_opts=opts.BMapCopyrightTypeOpts(copyright_="我的")
-            #geo_location_control_opts=opts.BMapGeoLocationControlOpts()
-            #overview_map_opts=opts.BMapOverviewMapControlOpts(is_open=True),
-        )
-        #.set_global_opts(title_opts=opts.TitleOpts(title="BMap-基本示例"))
     )
+    sequence = []
+    for i in range(len(pos)):
+        #print(pos[i])
+        c.add_coordinate(pos[i][0],pos[i][2],pos[i][1])
+        sequence.append((str(i),0.1))
+    c.add(
+        "投诉坐标",#系列名称
+        sequence,
+        type_="scatter",#"heatmap" 可以切换显示的类型热力图或散点图
+        label_opts=opts.LabelOpts(formatter="{b}"),
+    )
+    #.add("bmap",
+        #[{"coord":[117.21, 39.13],"sim":10},{"coord":[117.20, 39.13],"sim":20},{"coord":[117.21, 39.12],"sim":5}],
+        #[list(z) for z in zip(Faker.provinces, Faker.values())],#zip将迭代对像打包成元组最后的结果是[['浙江',v1],['广东',v2]]
+        #[[117.21, 39.13],[117.20, 39.12],[117.22, 39.10],[117.25, 39.11],[117.19, 39.02],[117.20, 39.12]],
+        #type_="heatmap",
+        #label_opts=opts.LabelOpts(formatter="{b}"))
+    c.set_series_opts(effect_opts=opts.EffectOpts(is_show=True),
+                    label_opts=opts.LabelOpts(is_show=False))
+    c.add_control_panel(
+        scale_control_opts=opts.BMapScaleControlOpts(),
+        navigation_control_opts=opts.BMapNavigationControlOpts(),
+        maptype_control_opts=opts.BMapTypeControlOpts())
+        #copyright_control_opts=opts.BMapCopyrightTypeOpts(copyright_="我的")
+        #geo_location_control_opts=opts.BMapGeoLocationControlOpts()
+        #overview_map_opts=opts.BMapOverviewMapControlOpts(is_open=True),
+    c.set_global_opts(visualmap_opts=opts.VisualMapOpts())
     return c
 
 def get_mymap(message) -> Geo:
@@ -232,10 +240,20 @@ def get_mymap(message) -> Geo:
          Geo()
         .add_schema(maptype="北京",is_roam=False)
         # 加入自定义的点，格式为
-        .add_coordinate("测试点", pos[0],pos[1])
+        #.add_coordinate("测试点", pos[0],pos[1])
+        #.add(
+        #    "测试点",[("测试点", 51)],type_="effectScatter",
+        #    label_opts=opts.LabelOpts(formatter="{b}"),
+        #)
         #.add_coordinate_json("./demo/coord.json")
         # 为自定义的点添加属性
-        .add("测试点",[("测试点", 51)],type_="effectScatter")
+        #.add("测试点",[("测试点", 51)],type_="effectScatter")
+    
+        .add("bmap",
+            [list(z) for z in zip(Faker.provinces, Faker.values())],
+            type_="heatmap",
+            label_opts=opts.LabelOpts(formatter="{b}"))
+        
         #.set_series_opts()
         .set_series_opts(label_opts=opts.LabelOpts(is_show=False),
                          effect_opts=opts.EffectOpts(is_show=True))
@@ -250,7 +268,9 @@ def process_data(frames,chains):
     line_data = {'x':[],'y':[]}#画折线图只要x轴和y轴的数据
     themeriver_data =[]       #[["第i帧数",事件链在第i帧举报数目,"事件链关键词"]]
     themreiver_lengend = []
+    pos = []#每条举报数据的位置
     idx = 1
+    pos_idx = 0
     for i in range(len(frames)):
         frame = frames[i]
         line_data['x'].append(str(i+1))#帧的序号,x轴是str类型
@@ -266,9 +286,16 @@ def process_data(frames,chains):
         temp = []
         for e in chain:#事件链上的每个结点
             keywords = e["community_keywords"]#array["","",""]
+            lats = e["community_lats"]
+            lons = e["community_lons"]
             for k in keywords:
                 for w in k.split(" "):
                     temp.append(w)
+            for i in range(len(lats)):
+                la = lats[i]
+                lo = lons[i]
+                pos.append((str(pos_idx),la,lo))
+                pos_idx += 1
         C = np.array(collections.Counter(temp).most_common())#[("word":num)]
         if(len(C)<20):
             e = len(C)
@@ -283,7 +310,7 @@ def process_data(frames,chains):
             num_docs = e["community_docs"]
             themeriver_data.append([frame_id,num_docs,abstract])
     #print(themreiver_lengend)
-    return line_data,themeriver_data,themreiver_lengend
+    return line_data,themeriver_data,themreiver_lengend,pos
 
 def event_chain(request):
     '''
@@ -302,9 +329,9 @@ def event_chain(request):
     #line_data = frames
     chains = process.match(frames)
     #print(chain)
-    line_data,themeriver_data,themeriver_lengend = process_data(frames,chains)
+    line_data,themeriver_data,themeriver_lengend, pos = process_data(frames,chains)
     page = Page(layout=Page.DraggablePageLayout)
-    mymap = get_bmap(message)
+    mymap = get_bmap(pos)
     #mymap = get_mymap(message)
     mymap.chart_id = "bmap_1"
     myline = get_line(line_data)
@@ -429,11 +456,23 @@ def get_wordcloud_line()->Line:
             WordCloud()
             .add("", words, word_size_range=[20, 100], shape=SymbolType.DIAMOND)
             .set_global_opts(title_opts=opts.TitleOpts(title="事件链词云图"))
+            
         )
-        tl.add(wordcloud, "{}年".format(i))
+        tl.add(wordcloud, "{}年".format(i))#pycharts易展示，但不好交互
+        #tl.add()
+        #tl.
+        #tl.add(Bar(),"{}年".format(i))
+    #print()
+    #tl.__getattribute__("timepoint")
     return tl
 
 def event(request):
+    print(request)
+    context = {}
+    if 'timelineIndex' in request.GET and request.GET['timelineIndex']:
+        context["timelineIndex"] = request.GET['timelineIndex']
+    if 'scrollTop' in request.GET and request.GET['scrollTop']:
+        context["scrollTop"] = request.GET['scrollTop']
     page = Page(layout=Page.DraggablePageLayout)
     eventmap = get_eventbmap(message="天津市地图")
     eventmap.chart_id = "map_event"
@@ -448,9 +487,11 @@ def event(request):
     page.add(wordcloudline)
     page.add(eventtable)
     page.render(path="event.html",template_name="simple_page_event.html")
+    #记得在以下函数中增加了模板函数
     Page.save_resize_html("event.html", cfg_file="./demo/chart_config_event.json", dest="./demo/templates/my_event_charts.html")
     #page.render("bmap.html",template="simple_page_event.html")
-    return render(request,"my_event_charts.html")#可以向模板中填充数据来显示矩形框
+    #render("my_event_charts.html",context)
+    return render(request,"my_event_charts.html",context)#可以向模板中填充数据来显示矩形框
     #return HttpResponse(page.render_embed(template_name="simple_page_event.html"))
 
 

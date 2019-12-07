@@ -80,41 +80,45 @@ class Match_Events:
         right_embs = np.array([vec/np.linalg.norm(vec) for vec in right_embs])
         l = len(left_frame)
         r = len(right_frame)
-        print("left frame communities : {}".format(l))
-        print("right frame communities : {}".format(r))
+        #print("left frame communities : {}".format(l))
+        #print("right frame communities : {}".format(r))
         #如果用cos计算sim 都要归一化
         sim = np.matmul(left_embs,right_embs.transpose())#如果行数小于列数则每行都会匹配到,否则每列都会匹配到
         for i in range(l):
             for j in range(r):
                 if(sim[i][j]<matrix_t):sim[i][j]=0
         row_ind, col_ind = linear_sum_assignment(sim*-1)#最大权值二部图匹配所有要*-号
-        print(row_ind)
-        print(col_ind)
-        print(sim[row_ind, col_ind].sum())#因原算法是最小权值匹配所以要乘-1
+        #print(row_ind)
+        #print(col_ind)
+        #print(sim[row_ind, col_ind].sum())#因原算法是最小权值匹配所以要乘-1
         match_left = left_frame[row_ind]#如果是相同坐标表示match_left ith元素与match_left ith元素匹配
         match_right = right_frame[col_ind]
         for i in range(len(row_ind)):
             comm_left = {}
             comm_right = {}
-            print("left 的id是:{},举报数目是:{},内容是:".format(match_left[i]["community_id"],len(match_left[i]["member_degree"])))
-            print(match_left[i]["member_content"])
+            #print("left 的id是:{},举报数目是:{},内容是:".format(match_left[i]["community_id"],len(match_left[i]["member_degree"])))
+            #print(match_left[i]["member_content"])
             comm_left["community_docs"] = len(match_left[i]["member_degree"])
             comm_left["community_content"] = match_left[i]["member_content"]
             comm_left["community_metrics"] = match_left[i]["community_metrics"]
             comm_left["community_types"] = match_left[i]["community_types"]
             comm_left["community_keywords"] = match_left[i]["community_keywords"]
             comm_left["community_frameid"] = frame_id
-            print("匹配的是：")
-            print("right 的id是:{},举报数目是:{},内容是:".format(match_right[i]["community_id"],len(match_right[i]["member_degree"])))
-            print(match_right[i]["member_content"])
+            comm_left["community_lats"] = match_left[i]["community_lats"]
+            comm_left["community_lons"] = match_left[i]["community_lons"]
+            #print("匹配的是：")
+            #print("right 的id是:{},举报数目是:{},内容是:".format(match_right[i]["community_id"],len(match_right[i]["member_degree"])))
+            #print(match_right[i]["member_content"])
             comm_right["community_docs"] = len(match_right[i]["member_degree"])
             comm_right["community_content"] = match_right[i]["member_content"]
             comm_right["community_metrics"] = match_right[i]["community_metrics"]
             comm_right["community_types"] = match_right[i]["community_types"]
             comm_right["community_keywords"] = match_right[i]["community_keywords"]
             comm_right["community_frameid"] = frame_id+1
-            print("相似度为:{}".format(sim[row_ind[i]][col_ind[i]]))#如果相似度很低则不能匹配
-            print("<%%%%%%%%%%%%%%%%%%%>")
+            comm_right["community_lats"] = match_right[i]["community_lats"]
+            comm_right["community_lons"] = match_right[i]["community_lons"]
+            #print("相似度为:{}".format(sim[row_ind[i]][col_ind[i]]))#如果相似度很低则不能匹配
+            #print("<%%%%%%%%%%%%%%%%%%%>")
             old_key = str(frame_id)+"_"+str(match_left[i]["community_id"])
             new_key = str(frame_id+1)+"_"+str(match_right[i]["community_id"])#匹配为p-q,其中q为key，事件链的终点
             if(sim[row_ind[i]][col_ind[i]] < events_t):#如果事件链间事件的相似性少于阈值则是旧事件的结束或新事件的开始
