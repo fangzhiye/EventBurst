@@ -118,7 +118,7 @@ class Match_Events:
             comm_right["community_lats"] = match_right[i]["community_lats"]
             comm_right["community_lons"] = match_right[i]["community_lons"]
             #print("相似度为:{}".format(sim[row_ind[i]][col_ind[i]]))#如果相似度很低则不能匹配
-            #print("<%%%%%%%%%%%%%%%%%%%>")
+            ##print("<%%%%%%%%%%%%%%%%%%%>")
             old_key = str(frame_id)+"_"+str(match_left[i]["community_id"])
             new_key = str(frame_id+1)+"_"+str(match_right[i]["community_id"])#匹配为p-q,其中q为key，事件链的终点
             if(sim[row_ind[i]][col_ind[i]] < events_t):#如果事件链间事件的相似性少于阈值则是旧事件的结束或新事件的开始
@@ -145,7 +145,7 @@ class Match_Events:
         #key为"frame_id + endcomm_id":[{},{},{},"每个元素为事件"]
         for i in range(num_frames-1):
             self.match_frames(frames[i],frames[i+1],i,matrix_t,events_t)
-            print("############ new match begin #############")
+            #print("############ new match begin #############")
         return self.ret
 #%%
 #每个.py文件其实都是一个模块,python在运行前会先在当前目录、PYTHONPATH、默认目录下搜索模块

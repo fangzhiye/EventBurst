@@ -152,11 +152,11 @@ class Community_Detecion:
             nodes.append((i,{'key_words':keywords[i]}))
         #构建边的集合
         sim = np.matmul(emb_temp,emb_temp.transpose())#计算文档与文档间的相似矩阵
-        print(sim.shape)
+        #print(sim.shape)
         #T值越大划分的社区越多,社区内的类别越细
         T = 0.8#相似度的阈值,加了tf_idf权重后,相似性大于T的边减少了,阈值越大则边的数目越少,实验发现T大社区数目增多
         #T越大 边越小 社区越多 社区内的类别也更准确
-        print("边相似性的阈值是:{}".format(T))
+        #print("边相似性的阈值是:{}".format(T))
         edges = []
         for i in range(m):
             for j in range(i,m):
@@ -166,8 +166,8 @@ class Community_Detecion:
         G = nx.Graph()
         G.add_edges_from(edges)
         G.add_nodes_from(nodes)
-        print("图的结点数:{}".format(G.number_of_nodes()))
-        print("图的边数:{}".format(G.number_of_edges()))
+        #print("图的结点数:{}".format(G.number_of_nodes()))
+        #print("图的边数:{}".format(G.number_of_edges()))
         return G
     #%%
     #nodes = [(1,{'color':'red'}),(2,{'color':'blue'}),(3,{'color':'black'}),(4,{'color':'white'})]#增加结点和结点属性
@@ -228,13 +228,13 @@ class Community_Detecion:
         keywords = ret_df['KEY_WORDS']
         partition = community_louvain.best_partition(G,resolution = 2) #Louvain算法划分社区,返回的是一个dict,key是文档id value是文档所属社区,可见如果边过多计算时间慢
         modularity = community_louvain.modularity(partition,G)
-        print("社区划分的模块度是:{}".format(modularity))
+        #print("社区划分的模块度是:{}".format(modularity))
         #resolution 控制社区内数目的大小,越小社区数目越小,resolution可以让供热问题聚类为一类
         comm_dict = defaultdict(list)
         for doc in partition:
             comm_dict[partition[doc]].append(doc)#[{O:[node1,...,node2]}] {'社区id':"文档list"}
         num_comm = len(comm_dict)
-        print("社区数目为:{}".format(num_comm))
+        #print("社区数目为:{}".format(num_comm))
 
         self.labels_true = np.empty(shape=[m])#各条举报数据的label GT
         labels_pred = np.empty(shape=[m])#以同一community中多数的label为这一community的label
@@ -264,7 +264,7 @@ class Community_Detecion:
             labels_pred[com_members] = com_id#同一个社区的文档预测的是同一个id
 
         scores = self.Eva_Metric(self.labels_true,labels_pred)
-        print(scores)
+        #print(scores)
         return comm_dict,scores 
 #%%
     def get_commmetrics(self,comm_members):
@@ -314,7 +314,7 @@ class Community_Detecion:
         lats = np.array(ret_df['LATITUDE'])
         lons = np.array(ret_df['LONGITUDE'])
         ret = []
-        print("类别数目是:{}".format(len(set(types))))
+        #print("类别数目是:{}".format(len(set(types))))
         for item in comm_dict.items():
             #key 是com id
             if(len(item[1])<min_docs):#社区内数目至少要2条

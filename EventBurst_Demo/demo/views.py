@@ -321,16 +321,20 @@ def event_chain(request):
     )
     '''
     request.encoding='utf-8'
+    #如果有查询序号就执行查看event页页
+    if 'chainIdx' in request.GET and request.GET['chainIdx']:
+        print("bigin to url: chain")
+        return event(request)
     if 'date_begin' in request.GET and request.GET['date_begin']:
         message = '你搜索的内容为: ' + request.GET['date_begin']
     else:
         message = '天津市地图'
-    frames = process.detect("2015/11/05 00:00:00",3600*24,10)
+    frames = process.detect("2015/11/05 00:00:00",3600*24,2)
     #line_data = frames
     chains = process.match(frames)
     #print(chain)
     line_data,themeriver_data,themeriver_lengend, pos = process_data(frames,chains)
-    page = Page(layout=Page.DraggablePageLayout)
+    page = Page()
     mymap = get_bmap(pos)
     #mymap = get_mymap(message)
     mymap.chart_id = "bmap_1"
@@ -468,12 +472,13 @@ def get_wordcloud_line()->Line:
 
 def event(request):
     print(request)
+    print("query event")
     context = {}
-    if 'timelineIndex' in request.GET and request.GET['timelineIndex']:
+    if 'timelineIndex' in request.GET and request.GET['timelineIndex']:#获得tl的index
         context["timelineIndex"] = request.GET['timelineIndex']
     if 'scrollTop' in request.GET and request.GET['scrollTop']:
         context["scrollTop"] = request.GET['scrollTop']
-    page = Page(layout=Page.DraggablePageLayout)
+    page = Page()
     eventmap = get_eventbmap(message="天津市地图")
     eventmap.chart_id = "map_event"
     eventline = get_eventline()
@@ -490,7 +495,6 @@ def event(request):
     #记得在以下函数中增加了模板函数
     Page.save_resize_html("event.html", cfg_file="./demo/chart_config_event.json", dest="./demo/templates/my_event_charts.html")
     #page.render("bmap.html",template="simple_page_event.html")
-    #render("my_event_charts.html",context)
     return render(request,"my_event_charts.html",context)#可以向模板中填充数据来显示矩形框
     #return HttpResponse(page.render_embed(template_name="simple_page_event.html"))
 
@@ -536,7 +540,8 @@ def test(request):
     #scatter = get_scatter()
     eventmap = get_gridbmap(message="天津市地图")
     eventmap.chart_id = 'bmap_test'
-    
-    eventmap.render("bmap.html")
+    page = Page()
+    page.add(eventmap)
+    #eventmap.render("bmap.html")
     #print(eventmap.bmap_js_functions)
-    return HttpResponse(eventmap.render_embed())
+    return HttpResponse(page.render_embed())
