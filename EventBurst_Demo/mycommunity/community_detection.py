@@ -283,11 +283,11 @@ class Community_Detecion:
         reversed(sorted(comm_dict[comm],key=G.degree))#按结点的度排序
         community_member = comm_dict[comm]
         num = len(community_member)
-        print("community {} , 元素个数{} , 内容:".format(str(comm),str(num)))
+        #print("community {} , 元素个数{} , 内容:".format(str(comm),str(num)))
         if num>=5:
             num=5
-        for i in range(num):
-            print(keywords[community_member[i]])
+        #for i in range(num):
+            #print(keywords[community_member[i]])
         #print("社区元素降序:")
         #print("community {}: {}".format(str(comm)," ".join(map(str,reversed(sorted(comm_dict[comm],key=G.degree))))))
     #print("社区元素升序:")
@@ -313,6 +313,7 @@ class Community_Detecion:
         contents = np.array(ret_df['CONTENT'])
         lats = np.array(ret_df['LATITUDE'])
         lons = np.array(ret_df['LONGITUDE'])
+        regions = np.array(ret_df['REGION'])
         ret = []
         #print("类别数目是:{}".format(len(set(types))))
         for item in comm_dict.items():
@@ -332,6 +333,8 @@ class Community_Detecion:
             community_temp['community_lats'] = lats[item[1]]
             community_temp['community_lons'] = lons[item[1]]
             community_temp['community_keywords'] = keywords[item[1]]#该comm里每条举报的keywords
+            community_temp['community_regions'] = regions[[item[1]]]
+            community_temp['community_contents'] = contents[item[1]]
             ret.append(community_temp)
         return ret
         #date = time_b.split(" ")[0].split("/")[-1]

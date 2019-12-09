@@ -4,6 +4,7 @@
 import numpy as np
 import pandas as pd
 import collections
+import os
 #%%
 project_path = "D:/EVENTBURST/data"
 file_path = os.path.join(project_path,"all_adv_dataseg_loc1hot_time1hot.csv")#2015年至2016年举报数据

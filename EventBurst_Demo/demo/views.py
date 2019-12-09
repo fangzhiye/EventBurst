@@ -18,6 +18,7 @@ import os
 import sys
 #sys.path.append("..")
 from mycommunity.process import Process
+from mycommunity.utils import time2timestamp
 #print(sys.path)
 process = Process()
 
@@ -262,7 +263,7 @@ def get_mymap(message) -> Geo:
     )
     return tianjing_map
 
-def process_data(frames,chains):
+def process_data(frames,chains):#所有事件
     #frames[[{event1},{event2}],[{event1},{event2}]]
     #chain{"key":[{event1}->{event2}->{event2}]}
     line_data = {'x':[],'y':[]}#画折线图只要x轴和y轴的数据
@@ -312,7 +313,13 @@ def process_data(frames,chains):
     #print(themreiver_lengend)
     return line_data,themeriver_data,themreiver_lengend,pos
 
+frames = []
+chains = []
+chainIdx = -1
 def event_chain(request):
+    global frames
+    global chains
+    global chainIdx
     '''
     grid = (
         Grid()
@@ -321,15 +328,26 @@ def event_chain(request):
     )
     '''
     request.encoding='utf-8'
-    #如果有查询序号就执行查看event页页
+    date_begin = "2015/11/05 00:00:00"
+    date_end = "2015/11/16 00:00:00"
+    timeInterval = 24
+    num_frames = 5
+    #如果有查询序号就执行查看event页面
     if 'chainIdx' in request.GET and request.GET['chainIdx']:
         print("bigin to url: chain")
+        chainIdx = request.GET['chainIdx']
         return event(request)
     if 'date_begin' in request.GET and request.GET['date_begin']:
-        message = '你搜索的内容为: ' + request.GET['date_begin']
-    else:
-        message = '天津市地图'
-    frames = process.detect("2015/11/05 00:00:00",3600*24,2)
+        date_begin = request.GET['date_begin']+" "+"00:00:00"
+        date_begin = date_begin.replace("-","/")
+        print("databigin:{}".format(date_begin))
+    if 'date_end' in request.GET and request.GET['date_end']:
+        date_end = request.GET['date_end']+" "+"00:00:00"
+        date_end = date_end.replace("-","/")
+        print("dataend:{}".format(date_end))
+    num_frames = int((time2timestamp(date_end)-time2timestamp(date_begin))/(3600*timeInterval))
+    print("num_frames:{}".format(num_frames))
+    frames = process.detect(date_begin,3600*timeInterval,num_frames)
     #line_data = frames
     chains = process.match(frames)
     #print(chain)
@@ -365,6 +383,7 @@ def get_eventmap(message) -> Geo:
     )
     return tianjing_map
 
+'''
 def get_eventbmap(message) -> BMap:
     BAIDU_AK = "HOTBRAfU1jGcQKHBX15ucKsfZO722eyN"
     pos = (117.20, 39.12)
@@ -393,26 +412,73 @@ def get_eventbmap(message) -> BMap:
         #.set_global_opts(title_opts=opts.TitleOpts(title="BMap-基本示例"))
     )
     return c
+'''
+def get_eventbmap(pos) -> BMap:
+    #[(lo,la),(lo,la)]这种格式即可
+    BAIDU_AK = "HOTBRAfU1jGcQKHBX15ucKsfZO722eyN"
+    center = (117.20, 39.12)
+    c = BMap()
+    c.add_schema(
+            baidu_ak=BAIDU_AK,
+            center=[117.20, 39.12],
+            zoom = 10,
+            is_roam=False
+    )
+    sequence = []
+    for i in range(len(pos)):
+        c.add_coordinate(str(i),pos[i][0],pos[i][1])#[(posindex,lo,la)]
+        sequence.append((str(i),0.1))#这里名字和pos要对应
+    c.add(
+        "投诉坐标",#系列名称
+        sequence,
+        type_="scatter",#"heatmap" 可以切换显示的类型热力图或散点图
+        label_opts=opts.LabelOpts(formatter="{b}"),
+    )
+    c.set_series_opts(effect_opts=opts.EffectOpts(is_show=True),
+                    label_opts=opts.LabelOpts(is_show=False))
+    c.add_control_panel(
+        scale_control_opts=opts.BMapScaleControlOpts(),
+        navigation_control_opts=opts.BMapNavigationControlOpts(),
+        maptype_control_opts=opts.BMapTypeControlOpts())
+    c.set_global_opts(visualmap_opts=opts.VisualMapOpts())
+    return c
 
-def get_eventline():
+def get_eventline(line_data):
+    print(Faker.values())
+    print(Faker.choose())
+    x = line_data['x']
+    y = line_data['y']
     line = (
         Line()
-        .add_xaxis(Faker.choose())
+        .add_xaxis(x)
         #.add_yaxis("商家A", Faker.values())
-        .add_yaxis("商家B", Faker.values())
+        .add_yaxis(
+            "举报数目", y,
+            markline_opts=opts.MarkLineOpts(data=[opts.MarkLineItem(type_="average")]),
+            )
         .set_global_opts(
-            title_opts=opts.TitleOpts(title="天津政府服务热线数目", pos_right="center"),
+            xaxis_opts=opts.AxisOpts(name="帧数",splitarea_opts=opts.SplitLineOpts(is_show=True)),
+            yaxis_opts=opts.AxisOpts(
+                name="举报数目",
+                splitline_opts=opts.SplitLineOpts(is_show=True),
+                is_scale=True,
+            ),
+            #title_opts=opts.TitleOpts(title="天津政府服务热线数目变化", pos_right="center"),
             legend_opts=opts.LegendOpts(is_show=False),
             #legend_opts=opts.LegendOpts(pos_top="20%"),
-            datazoom_opts=opts.DataZoomOpts(),
+            datazoom_opts=opts.DataZoomOpts(range_start=0,range_end=100),
+            #xaxis_opts=opts.AxisOpts(type_="value")#经轴是数值value
             #toolbox_opts=opts.ToolboxOpts(orient='vertical',pos_right="right")
         )
     )
     
     return line
-def get_eventtable() -> Table:
-    table = Table()
 
+def get_eventtable(rows) -> Table:
+    table = Table()
+    headers = ["序号","日期","举报内容","所属区域","维度","经度"]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+    '''
     headers = ["City name", "Area", "Population", "Annual Rainfall"]
     rows = [
         ["Brisbane", 5905, 1857594, 1146.4],
@@ -426,13 +492,16 @@ def get_eventtable() -> Table:
         ["Melbourne", 1566, 3806092, 646.9],
         ["Perth", 5386, 1554769, 869.4],
     ]
+    '''
     table.add(headers, rows).set_global_opts(
         title_opts=ComponentTitleOpts(title="详细举报数据"),
     )
     return table
 
-def get_wordcloud_line()->Line:
+def get_wordcloud_line(words,frame_ids)->Line:
     tl = Timeline()
+    #print(words)
+    '''
     words = [
     ("Sam S Club", 10000),
     ("Macys", 6181),
@@ -455,37 +524,74 @@ def get_wordcloud_line()->Line:
     ("NCAA baseball tournament", 273),
     ("Point Break", 265),
     ]
-    for i in range(2015, 2020):
+    '''
+    for i in frame_ids:
         wordcloud = (
             WordCloud()
             .add("", words, word_size_range=[20, 100], shape=SymbolType.DIAMOND)
             .set_global_opts(title_opts=opts.TitleOpts(title="事件链词云图"))
             
         )
-        tl.add(wordcloud, "{}年".format(i))#pycharts易展示，但不好交互
-        #tl.add()
-        #tl.
-        #tl.add(Bar(),"{}年".format(i))
-    #print()
-    #tl.__getattribute__("timepoint")
+        tl.add(wordcloud, "{}帧".format(i))#pycharts易展示，但不好交互
     return tl
 
+def process_chain(chain):
+    line_data = {'x':[],'y':[]}
+    poses=[]#[[(lo,loa),(lo,la)],[...]]
+    words=[]#[[("words1",fq1),("words2",fq2),("words3",fq3)],[...]]
+    frame_ids = []
+    table_data = []
+    for i in range(len(chain)):
+        rows=[]
+        e = chain[i]
+        pos = []
+        word = []
+        line_data['y'].append(e["community_docs"])
+        line_data['x'].append(str(e["community_frameid"]+1))
+        frame_ids.append(e["community_frameid"]+1)
+        lats = e["community_lats"]
+        lons = e["community_lons"]
+        keywords = e["community_keywords"]#array["","",""]
+        rigions = e["community_regions"]
+        dates = e["community_dates"]
+        contents = e["community_contents"]
+        for j in range(len(dates)):
+            rows.append([str(j+1),dates[j],contents[j],rigions[j],round(lats[j],6),round(lons[j],6)])
+        table_data.append(rows)
+        for keyword in keywords:
+            for w in keyword.split(" "):
+                word.append(w)
+        words.append(collections.Counter(word).items())
+        for k in range(len(lats)):
+            la = lats[k]
+            lo = lons[k]
+            pos.append((lo,la))
+        poses.append(pos)
+    return line_data,poses,words,frame_ids,table_data
+            
+
 def event(request):
-    print(request)
     print("query event")
+    print(chainIdx)
+    chain_keys = list(chains.keys())
+    chain= chains[chain_keys[int(chainIdx)]]#[{event1},{event2},{event3}]
     context = {}
+    timelineIndex = 0
     if 'timelineIndex' in request.GET and request.GET['timelineIndex']:#获得tl的index
         context["timelineIndex"] = request.GET['timelineIndex']
+        timelineIndex = int(context["timelineIndex"])
     if 'scrollTop' in request.GET and request.GET['scrollTop']:
         context["scrollTop"] = request.GET['scrollTop']
+    line_data,poses,words,frame_ids,table_data = process_chain(chain)
     page = Page()
-    eventmap = get_eventbmap(message="天津市地图")
+    print("timelineIdx:{}".format(timelineIndex))
+    eventmap = get_eventbmap(poses[timelineIndex])
     eventmap.chart_id = "map_event"
-    eventline = get_eventline()
+    eventline = get_eventline(line_data)
     eventline.chart_id = "line_event"
-    wordcloudline = get_wordcloud_line()
+    wordcloudline = get_wordcloud_line(words[timelineIndex],frame_ids)
     wordcloudline.chart_id = "wordcloud_line"
-    eventtable = get_eventtable()
+    eventtable = get_eventtable(table_data[timelineIndex])
     eventtable.chart_id = "table_event"
     page.add(eventmap)
     page.add(eventline)
