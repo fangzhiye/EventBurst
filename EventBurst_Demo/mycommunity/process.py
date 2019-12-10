@@ -57,3 +57,4 @@ class Process:
             acc.append(i['community_metrics'][0])
             recall.append(i['community_metrics'][1])
 # %%
+#myprocess = Process()

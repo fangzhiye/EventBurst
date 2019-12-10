@@ -11,14 +11,15 @@ CurrentConfig.GLOBAL_ENV = Environment(loader=FileSystemLoader("./demo/templates
 from pyecharts import options as opts
 from pyecharts.charts import Page, ThemeRiver, Bar, Map, Geo, Grid, Line, Scatter, Timeline,WordCloud, BMap
 from pyecharts.faker import Collector, Faker
-
+from pyecharts.globals import ThemeType
 from pyecharts.components import Table
 from pyecharts.options import ComponentTitleOpts
 import os
-import sys
+#import sys
 #sys.path.append("..")
 from mycommunity.process import Process
 from mycommunity.utils import time2timestamp
+#from mycommunity.process import myprocess
 #print(sys.path)
 process = Process()
 
@@ -156,8 +157,8 @@ def get_themeriver(data,lengend):
             singleaxis_opts=opts.SingleAxisOpts( pos_bottom="50%",min_=1),#可以通过调整坐标轴来调整图的位置
             label_opts = opts.LabelOpts(is_show=False)
         )
-        .set_global_opts(title_opts=opts.TitleOpts(title="事件链"),
-                         tooltip_opts=opts.TooltipOpts(is_show=True,trigger_on="mousemove|click"),
+        .set_global_opts(title_opts=opts.TitleOpts(title="事件链河流图",subtitle="图例按突发性程度降序排序"),
+                         tooltip_opts=opts.TooltipOpts(is_show=True),
                          legend_opts=opts.LegendOpts(type_ = 'scroll',pos_left="5%",orient='vertical',pos_top="55%"))
                         #datazoom_opts=opts.DataZoomOpts())#图例设置
                         
@@ -189,16 +190,15 @@ def get_line(line_data):
             #legend_opts=opts.LegendOpts(pos_top="20%"),
             datazoom_opts=opts.DataZoomOpts(range_start=0,range_end=100),
             #xaxis_opts=opts.AxisOpts(type_="value")#经轴是数值value
-            #toolbox_opts=opts.ToolboxOpts(orient='vertical',pos_right="right")
+            toolbox_opts=opts.ToolboxOpts(pos_left="right")
         )
     )
     
     return line
 
-
 def get_bmap(pos) -> BMap:
     BAIDU_AK = "HOTBRAfU1jGcQKHBX15ucKsfZO722eyN"
-    center = (117.20, 39.12)
+    #center = (117.20, 39.12)
     c = BMap()
     c.add_schema(
             baidu_ak=BAIDU_AK,
@@ -210,12 +210,13 @@ def get_bmap(pos) -> BMap:
     for i in range(len(pos)):
         #print(pos[i])
         c.add_coordinate(pos[i][0],pos[i][2],pos[i][1])
-        sequence.append((str(i),0.1))
+        sequence.append((str(i),5))
     c.add(
         "投诉坐标",#系列名称
         sequence,
         type_="scatter",#"heatmap" 可以切换显示的类型热力图或散点图
         label_opts=opts.LabelOpts(formatter="{b}"),
+        symbol_size=4#scatter大小
     )
     #.add("bmap",
         #[{"coord":[117.21, 39.13],"sim":10},{"coord":[117.20, 39.13],"sim":20},{"coord":[117.21, 39.12],"sim":5}],
@@ -224,7 +225,8 @@ def get_bmap(pos) -> BMap:
         #type_="heatmap",
         #label_opts=opts.LabelOpts(formatter="{b}"))
     c.set_series_opts(effect_opts=opts.EffectOpts(is_show=True),
-                    label_opts=opts.LabelOpts(is_show=False))
+                      label_opts=opts.LabelOpts(is_show=False),
+                      )
     c.add_control_panel(
         scale_control_opts=opts.BMapScaleControlOpts(),
         navigation_control_opts=opts.BMapNavigationControlOpts(),
@@ -232,7 +234,7 @@ def get_bmap(pos) -> BMap:
         #copyright_control_opts=opts.BMapCopyrightTypeOpts(copyright_="我的")
         #geo_location_control_opts=opts.BMapGeoLocationControlOpts()
         #overview_map_opts=opts.BMapOverviewMapControlOpts(is_open=True),
-    c.set_global_opts(visualmap_opts=opts.VisualMapOpts())
+    #c.set_global_opts(visualmap_opts=opts.VisualMapOpts(pos_left="right"))
     return c
 
 def get_mymap(message) -> Geo:
@@ -249,19 +251,18 @@ def get_mymap(message) -> Geo:
         #.add_coordinate_json("./demo/coord.json")
         # 为自定义的点添加属性
         #.add("测试点",[("测试点", 51)],type_="effectScatter")
-    
         .add("bmap",
             [list(z) for z in zip(Faker.provinces, Faker.values())],
             type_="heatmap",
             label_opts=opts.LabelOpts(formatter="{b}"))
-        
         #.set_series_opts()
         .set_series_opts(label_opts=opts.LabelOpts(is_show=False),
                          effect_opts=opts.EffectOpts(is_show=True))
         .set_global_opts(title_opts=opts.TitleOpts(title=message,pos_right="center"),
-                        )
+                    )
     )
     return tianjing_map
+#对事件链按bursty程度排序,并得到其对应的bursty值
 
 def process_data(frames,chains):#所有事件
     #frames[[{event1},{event2}],[{event1},{event2}]]
@@ -277,7 +278,7 @@ def process_data(frames,chains):#所有事件
         line_data['x'].append(str(i+1))#帧的序号,x轴是str类型
         y = 0
         for e in frame:
-            y+=len(e)
+            y+=len(e["member_degree"])
         line_data['y'].append(y)#每帧的举报数目
     #print(chains)
     for k,v in chains.items():
@@ -312,14 +313,30 @@ def process_data(frames,chains):#所有事件
             themeriver_data.append([frame_id,num_docs,abstract])
     #print(themreiver_lengend)
     return line_data,themeriver_data,themreiver_lengend,pos
+def process_chains(chains,global_event=True):
+    #chains : {key[{},{},{}]}
+    #global_event : 是全局还是局部事件
+    #返回按bursty排序的chain 和一bursty数组
+    #局部事件 遍历所有chain,该chain可以根据其doc的pos被分为多条chain
+    '''
+    对事件链的第一个结点的e的d根据pos map到对应的grid grid[[{key:[{事件1},{事件二}]}],[grid]]
+    即对事件链的d分配到map的各grid,如果chain_key+grid_key一样就往链上加增加结果，否则构成新链
+    chain_key+grid_key是新链的key
+    '''
 
 frames = []
 chains = []
 chainIdx = -1
+date_begin_old = ""
+date_end_old = ""
+timeInterval_old = -1
 def event_chain(request):
     global frames
     global chains
     global chainIdx
+    global date_begin_old
+    global date_end_old
+    global timeInterval_old
     '''
     grid = (
         Grid()
@@ -328,14 +345,14 @@ def event_chain(request):
     )
     '''
     request.encoding='utf-8'
-    date_begin = "2015/11/05 00:00:00"
-    date_end = "2015/11/16 00:00:00"
+    date_begin = "2015/07/15 00:00:00"
+    date_end = "2015/07/16 00:00:00"
     timeInterval = 24
     num_frames = 5
     #如果有查询序号就执行查看event页面
     if 'chainIdx' in request.GET and request.GET['chainIdx']:
         print("bigin to url: chain")
-        chainIdx = request.GET['chainIdx']
+        chainIdx = int(request.GET['chainIdx'])-1#下标从0开始，所以要减一
         return event(request)
     if 'date_begin' in request.GET and request.GET['date_begin']:
         date_begin = request.GET['date_begin']+" "+"00:00:00"
@@ -344,12 +361,19 @@ def event_chain(request):
     if 'date_end' in request.GET and request.GET['date_end']:
         date_end = request.GET['date_end']+" "+"00:00:00"
         date_end = date_end.replace("-","/")
+        
         print("dataend:{}".format(date_end))
     num_frames = int((time2timestamp(date_end)-time2timestamp(date_begin))/(3600*timeInterval))
     print("num_frames:{}".format(num_frames))
-    frames = process.detect(date_begin,3600*timeInterval,num_frames)
+    #如果获得经度和维度,就可以在process.detect中删除不在这经度和维度范围内的数据 to do
+    if(date_begin_old!=date_begin or date_end_old !=date_end_old or timeInterval_old!=timeInterval):#如果有一个更新
+        frames = process.detect(date_begin,3600*timeInterval,num_frames)
     #line_data = frames
-    chains = process.match(frames)
+    #不论是全城还是局部事件都要对chain做预处理操作，并且只返回前top20的事件链
+        chains = process.match(frames)
+    date_begin_old = date_begin
+    date_end_old = date_end
+    timeInterval_old = timeInterval
     #print(chain)
     line_data,themeriver_data,themeriver_lengend, pos = process_data(frames,chains)
     page = Page()
@@ -422,7 +446,8 @@ def get_eventbmap(pos) -> BMap:
             baidu_ak=BAIDU_AK,
             center=[117.20, 39.12],
             zoom = 10,
-            is_roam=False
+            is_roam=False,
+            
     )
     sequence = []
     for i in range(len(pos)):
@@ -433,6 +458,7 @@ def get_eventbmap(pos) -> BMap:
         sequence,
         type_="scatter",#"heatmap" 可以切换显示的类型热力图或散点图
         label_opts=opts.LabelOpts(formatter="{b}"),
+        symbol_size=5
     )
     c.set_series_opts(effect_opts=opts.EffectOpts(is_show=True),
                     label_opts=opts.LabelOpts(is_show=False))
@@ -440,7 +466,7 @@ def get_eventbmap(pos) -> BMap:
         scale_control_opts=opts.BMapScaleControlOpts(),
         navigation_control_opts=opts.BMapNavigationControlOpts(),
         maptype_control_opts=opts.BMapTypeControlOpts())
-    c.set_global_opts(visualmap_opts=opts.VisualMapOpts())
+    #c.set_global_opts(visualmap_opts=opts.VisualMapOpts())
     return c
 
 def get_eventline(line_data):
@@ -465,13 +491,13 @@ def get_eventline(line_data):
             ),
             #title_opts=opts.TitleOpts(title="天津政府服务热线数目变化", pos_right="center"),
             legend_opts=opts.LegendOpts(is_show=False),
+            toolbox_opts=opts.ToolboxOpts(pos_left="right"),
             #legend_opts=opts.LegendOpts(pos_top="20%"),
             datazoom_opts=opts.DataZoomOpts(range_start=0,range_end=100),
             #xaxis_opts=opts.AxisOpts(type_="value")#经轴是数值value
             #toolbox_opts=opts.ToolboxOpts(orient='vertical',pos_right="right")
         )
-    )
-    
+    ) 
     return line
 
 def get_eventtable(rows) -> Table:
@@ -528,7 +554,7 @@ def get_wordcloud_line(words,frame_ids)->Line:
     for i in frame_ids:
         wordcloud = (
             WordCloud()
-            .add("", words, word_size_range=[20, 100], shape=SymbolType.DIAMOND)
+            .add("", words, word_size_range=[20, 100])
             .set_global_opts(title_opts=opts.TitleOpts(title="事件链词云图"))
             
         )
