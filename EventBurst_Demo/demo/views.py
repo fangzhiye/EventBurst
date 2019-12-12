@@ -39,6 +39,7 @@ def index(request):
     #return render(request, 'clusters/index.html')#render(request,templatesname,content)#content是一dict
     #return HttpResponse(c.render_embed())#.render()会生成html文件
     return HttpResponse(c.render_embed(template_name="simple_chart_test.html"))#render_embed()指渲染包含选项的js代码
+
 def get_bar():
     bar = (
         Bar()
@@ -48,6 +49,7 @@ def get_bar():
         .set_global_opts(title_opts=opts.TitleOpts(title="Bar-基本示例", subtitle="我是副标题"))
     )
     return bar
+
 def get_scatter() -> Scatter:
     #print(Faker.values())
     #Scatter().set_global_opts()
@@ -64,6 +66,7 @@ def get_scatter() -> Scatter:
         
     )
     return scatter
+
 def get_themeriver(data,lengend):
     '''
     data = [
@@ -264,7 +267,7 @@ def get_mymap(message) -> Geo:
     return tianjing_map
 #对事件链按bursty程度排序,并得到其对应的bursty值
 
-def process_data(frames,chains):#所有事件
+def process_data(frames,chains,bursty_dict):#所有事件
     #frames[[{event1},{event2}],[{event1},{event2}]]
     #chain{"key":[{event1}->{event2}->{event2}]}
     line_data = {'x':[],'y':[]}#画折线图只要x轴和y轴的数据
@@ -283,7 +286,7 @@ def process_data(frames,chains):#所有事件
     #print(chains)
     for k,v in chains.items():
         chain = v#[{},{},{}] ...
-        abstract = " "+str(idx)+" "  #每条事件链的摘要
+        abstract = " "+str(idx)+" "+str(round(bursty_dict[k],2))+" "  #每条事件链的摘要
         idx+=1
         temp = []
         for e in chain:#事件链上的每个结点
@@ -313,7 +316,8 @@ def process_data(frames,chains):#所有事件
             themeriver_data.append([frame_id,num_docs,abstract])
     #print(themreiver_lengend)
     return line_data,themeriver_data,themreiver_lengend,pos
-def process_chains(chains,global_event=True):
+
+def preprocess_chains(chains,global_event=True):
     #chains : {key[{},{},{}]}
     #global_event : 是全局还是局部事件
     #返回按bursty排序的chain 和一bursty数组
@@ -323,6 +327,29 @@ def process_chains(chains,global_event=True):
     即对事件链的d分配到map的各grid,如果chain_key+grid_key一样就往链上加增加结果，否则构成新链
     chain_key+grid_key是新链的key
     '''
+    #根据bursty程度对key排序然后遍历
+    bursty_dict = {}
+    new_chains = {}
+    for k,v in chains.items():
+        temp = []
+        chain = v
+        for e in chain:
+            num_docs = e["community_docs"]
+            temp.append(num_docs)
+        temp = np.array(temp)
+        if(len(temp>1)):
+            ave = np.average(temp)
+            std = np.std(temp)
+            if(std!=0):
+                bursty_dict[k] = (temp[-1]-ave)/std
+            else:
+                bursty_dict[k] = 0
+        else:
+            bursty_dict[k] = 0
+    bursty_dict = dict(sorted(bursty_dict.items(), key=lambda d: d[1],reverse=True))#安value排序
+    for k,v in bursty_dict.items():
+        new_chains[k] = chains[k]
+    return new_chains,bursty_dict
 
 frames = []
 chains = []
@@ -337,6 +364,7 @@ def event_chain(request):
     global date_begin_old
     global date_end_old
     global timeInterval_old
+    context={}
     '''
     grid = (
         Grid()
@@ -345,8 +373,14 @@ def event_chain(request):
     )
     '''
     request.encoding='utf-8'
-    date_begin = "2015/07/15 00:00:00"
-    date_end = "2015/07/16 00:00:00"
+    if(date_begin_old==""):
+        date_begin = "2015/11/10"#初始
+        context["last_date_begin"]=date_begin
+        date_begin = "2015/11/10 00:00:00"
+    if(date_end_old==""):
+        date_end = "2015/11/16"
+        context["last_date_end"]=date_end
+        date_end = "2015/11/16 00:00:00"
     timeInterval = 24
     num_frames = 5
     #如果有查询序号就执行查看event页面
@@ -355,14 +389,16 @@ def event_chain(request):
         chainIdx = int(request.GET['chainIdx'])-1#下标从0开始，所以要减一
         return event(request)
     if 'date_begin' in request.GET and request.GET['date_begin']:
+        context["last_date_begin"] = request.GET['date_begin']
         date_begin = request.GET['date_begin']+" "+"00:00:00"
         date_begin = date_begin.replace("-","/")
         print("databigin:{}".format(date_begin))
     if 'date_end' in request.GET and request.GET['date_end']:
+        context["last_date_end"] = request.GET['date_end']
         date_end = request.GET['date_end']+" "+"00:00:00"
         date_end = date_end.replace("-","/")
-        
         print("dataend:{}".format(date_end))
+    #if(date_end="")
     num_frames = int((time2timestamp(date_end)-time2timestamp(date_begin))/(3600*timeInterval))
     print("num_frames:{}".format(num_frames))
     #如果获得经度和维度,就可以在process.detect中删除不在这经度和维度范围内的数据 to do
@@ -371,15 +407,16 @@ def event_chain(request):
     #line_data = frames
     #不论是全城还是局部事件都要对chain做预处理操作，并且只返回前top20的事件链
         chains = process.match(frames)
+    chains,bursty_dict = preprocess_chains(chains)#对chains做一些处理按bursty、glbal/local处理
     date_begin_old = date_begin
     date_end_old = date_end
     timeInterval_old = timeInterval
     #print(chain)
-    line_data,themeriver_data,themeriver_lengend, pos = process_data(frames,chains)
+    line_data,themeriver_data,themeriver_lengend, pos = process_data(frames,chains,bursty_dict)
     page = Page()
     mymap = get_bmap(pos)
     #mymap = get_mymap(message)
-    mymap.chart_id = "bmap_1"
+    mymap.chart_id = "bmap_1"#
     myline = get_line(line_data)
     myline.chart_id = "line_1"
     mythemeriver = get_themeriver(themeriver_data,themeriver_lengend)
