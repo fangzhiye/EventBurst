@@ -375,12 +375,10 @@ def event_chain(request):
     request.encoding='utf-8'
     if(date_begin_old==""):
         date_begin = "2015/11/10"#初始
-        context["last_date_begin"]=date_begin
         date_begin = "2015/11/10 00:00:00"
     if(date_end_old==""):
-        date_end = "2015/11/16"
-        context["last_date_end"]=date_end
-        date_end = "2015/11/16 00:00:00"
+        date_end = "2015/11/12"
+        date_end = "2015/11/12 00:00:00"
     timeInterval = 24
     num_frames = 5
     #如果有查询序号就执行查看event页面
