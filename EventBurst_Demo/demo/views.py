@@ -180,13 +180,15 @@ def get_line(line_data):
         .add_yaxis(
             "举报数目", y,
             markline_opts=opts.MarkLineOpts(data=[opts.MarkLineItem(type_="average")]),
+            is_smooth=True
             )
         .set_global_opts(
-            xaxis_opts=opts.AxisOpts(name="帧数",splitarea_opts=opts.SplitLineOpts(is_show=True)),
+            xaxis_opts=opts.AxisOpts(name="帧数",splitarea_opts=opts.SplitLineOpts(is_show=True),boundary_gap=False),
             yaxis_opts=opts.AxisOpts(
                 name="举报数目",
                 splitline_opts=opts.SplitLineOpts(is_show=True),
                 is_scale=True,
+                
             ),
             #title_opts=opts.TitleOpts(title="天津政府服务热线数目变化", pos_right="center"),
             legend_opts=opts.LegendOpts(is_show=False),
@@ -195,6 +197,7 @@ def get_line(line_data):
             #xaxis_opts=opts.AxisOpts(type_="value")#经轴是数值value
             toolbox_opts=opts.ToolboxOpts(pos_left="right")
         )
+        .set_series_opts(areastyle_opts=opts.AreaStyleOpts(opacity=0.5))
     )
     
     return line
@@ -516,9 +519,10 @@ def get_eventline(line_data):
         .add_yaxis(
             "举报数目", y,
             markline_opts=opts.MarkLineOpts(data=[opts.MarkLineItem(type_="average")]),
+            is_smooth=True
             )
         .set_global_opts(
-            xaxis_opts=opts.AxisOpts(name="帧数",splitarea_opts=opts.SplitLineOpts(is_show=True)),
+            xaxis_opts=opts.AxisOpts(name="帧数",splitarea_opts=opts.SplitLineOpts(is_show=True), boundary_gap=False),
             yaxis_opts=opts.AxisOpts(
                 name="举报数目",
                 splitline_opts=opts.SplitLineOpts(is_show=True),
@@ -532,14 +536,24 @@ def get_eventline(line_data):
             #xaxis_opts=opts.AxisOpts(type_="value")#经轴是数值value
             #toolbox_opts=opts.ToolboxOpts(orient='vertical',pos_right="right")
         )
+    .set_series_opts(areastyle_opts=opts.AreaStyleOpts(opacity=0.5))
     ) 
     return line
 
 def get_eventtable(rows) -> Table:
     table = Table()
     headers = ["序号","日期","举报内容","所属区域","维度","经度"]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
-    '''
+    for r in rows:
+        c = r[2]
+        cl = list(c)
+        n_w = len(cl)
+        idx = int((n_w-1)/30)#每40个词分行
+        if(idx<1):
+            continue
+        for i in range(idx):
+            cl.insert((i+1)*30,"\n")
+        r[2] = "".join(cl)
+    '''                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
     headers = ["City name", "Area", "Population", "Annual Rainfall"]
     rows = [
         ["Brisbane", 5905, 1857594, 1146.4],
@@ -617,7 +631,7 @@ def process_chain(chain):
         dates = e["community_dates"]
         contents = e["community_contents"]
         for j in range(len(dates)):
-            rows.append([str(j+1),dates[j],contents[j],rigions[j],round(lats[j],6),round(lons[j],6)])
+            rows.append([str(j+1),dates[j],contents[j],rigions[j],round(lats[j],4),round(lons[j],4)])
         table_data.append(rows)
         for keyword in keywords:
             for w in keyword.split(" "):
