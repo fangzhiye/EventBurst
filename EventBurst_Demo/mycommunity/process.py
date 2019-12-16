@@ -56,5 +56,40 @@ class Process:
             docs.append(i['community_docs'])
             acc.append(i['community_metrics'][0])
             recall.append(i['community_metrics'][1])
-# %%
-#myprocess = Process()
+    def preprocess_chains(self,chains,global_event=True):
+        #chains : {key[{},{},{}]}
+        #global_event : 是全局还是局部事件
+        #返回按bursty排序的chain 和一bursty数组
+        #局部事件 遍历所有chain,该chain可以根据其doc的pos被分为多条chain
+        '''
+        对事件链的第一个结点的e的d根据pos map到对应的grid grid[[{key:[{事件1},{事件二}]}],[grid]]
+        即对事件链的d分配到map的各grid,如果chain_key+grid_key一样就往链上加增加结果，否则构成新链
+        chain_key+grid_key是新链的key
+        '''
+        #根据bursty程度对key排序然后遍历
+        bursty_dict = {}
+        new_chains = {}
+        for k,v in chains.items():
+            temp = []
+            chain = v
+            for e in chain:
+                num_docs = e["community_docs"]
+                temp.append(num_docs)
+            temp = np.array(temp)
+            if(len(temp>1)):
+                ave = np.average(temp)
+                std = np.std(temp)
+                if(std!=0):
+                    bursty_dict[k] = (temp[-1]-ave)/std
+                else:
+                    bursty_dict[k] = 0
+            else:
+                bursty_dict[k] = 0
+        bursty_dict = dict(sorted(bursty_dict.items(), key=lambda d: d[1],reverse=True))#安value排序
+        '''
+        for k,v in bursty_dict.items():
+            new_chains[k] = chains[k]
+        '''
+        return bursty_dict
+
+
