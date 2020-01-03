@@ -1,6 +1,7 @@
 from django.shortcuts import render
 import numpy as np
 import collections
+import json
 # Create your views here.
 from jinja2 import Environment, FileSystemLoader
 from pyecharts.globals import CurrentConfig, SymbolType
@@ -18,9 +19,10 @@ import os
 #import sys
 #sys.path.append("..")
 from mycommunity.process import Process
-from mycommunity.utils import time2timestamp
+from mycommunity.utils import time2timestamp,getColor
 #from mycommunity.process import myprocess
 #print(sys.path)
+from django.http import JsonResponse
 process = Process()
 
 def index(request):
@@ -67,7 +69,10 @@ def get_scatter() -> Scatter:
     )
     return scatter
 
-def get_themeriver(data,lengend):
+def themeriver_formatter(params):
+    return "test"
+
+def get_themeriver(data,lengend,num_frames):
     '''
     data = [
         ["2015/11/08", 10, "DQ"],
@@ -157,11 +162,12 @@ def get_themeriver(data,lengend):
             #["DQ", "TY", "SS", "QG", "SY", "DD"],
             lengend,
             data,
-            singleaxis_opts=opts.SingleAxisOpts( pos_bottom="50%",min_=1),#可以通过调整坐标轴来调整图的位置
-            label_opts = opts.LabelOpts(is_show=False)
+            singleaxis_opts=opts.SingleAxisOpts( pos_bottom="50%",min_=1,max_=num_frames),#可以通过调整坐标轴来调整图的位置
+            label_opts = opts.LabelOpts(is_show=False),
+            tooltip_opts=opts.TooltipOpts(formatter="{a}")#不能用 不知道为什么
         )
         .set_global_opts(title_opts=opts.TitleOpts(title="事件链河流图",subtitle="图例按突发性程度降序排序"),
-                         tooltip_opts=opts.TooltipOpts(is_show=True),
+                         #tooltip_opts=opts.TooltipOpts(is_show=True,trigger="item",formatter='{@[0]}'),#formatter目前没效果？？？
                          legend_opts=opts.LegendOpts(type_ = 'scroll',pos_left="5%",orient='vertical',pos_top="55%"))
                         #datazoom_opts=opts.DataZoomOpts())#图例设置
                         
@@ -183,19 +189,18 @@ def get_line(line_data):
             is_smooth=True
             )
         .set_global_opts(
-            xaxis_opts=opts.AxisOpts(name="帧数",splitarea_opts=opts.SplitLineOpts(is_show=True),boundary_gap=False),
+            xaxis_opts=opts.AxisOpts(name="帧",splitarea_opts=opts.SplitLineOpts(is_show=True),boundary_gap=False),
             yaxis_opts=opts.AxisOpts(
                 name="举报数目",
                 splitline_opts=opts.SplitLineOpts(is_show=True),
-                is_scale=True,
-                
+                is_scale=True,    
             ),
             #title_opts=opts.TitleOpts(title="天津政府服务热线数目变化", pos_right="center"),
             legend_opts=opts.LegendOpts(is_show=False),
             #legend_opts=opts.LegendOpts(pos_top="20%"),
-            datazoom_opts=opts.DataZoomOpts(range_start=0,range_end=100),
+            #datazoom_opts=opts.DataZoomOpts(range_start=0,range_end=100),
             #xaxis_opts=opts.AxisOpts(type_="value")#经轴是数值value
-            toolbox_opts=opts.ToolboxOpts(pos_left="right")
+            #toolbox_opts=opts.ToolboxOpts(pos_left="right")
         )
         .set_series_opts(areastyle_opts=opts.AreaStyleOpts(opacity=0.5))
     )
@@ -269,25 +274,70 @@ def get_mymap(message) -> Geo:
     )
     return tianjing_map
 #对事件链按bursty程度排序,并得到其对应的bursty值
+def get_wordcloud(words):
+    '''
+    words = [
+    ("Sam S Club", 10000),
+    ("Macys", 6181),
+    ("Amy Schumer", 4386),
+    ("Jurassic World", 4055),
+    ("Charter Communications", 2467),
+    ("Chick Fil A", 2244),
+    ("Planet Fitness", 1868),
+    ("Pitch Perfect", 1484),
+    ("Express", 1112),
+    ("Home", 865),
+    ("Johnny Depp", 847),
+    ("Lena Dunham", 582),
+    ("Lewis Hamilton", 555),
+    ("KXAN", 550),
+    ("Mary Ellen Mark", 462),
+    ("Farrah Abraham", 366),
+    ("Rita Ora", 360),
+    ("Serena Williams", 282),
+    ("NCAA baseball tournament", 273),
+    ("Point Break", 265),
+    ]
+    '''
+    wordcloud = (
+                WordCloud()
+                .add("", words, word_size_range=[1, 100])
+                #.set_global_opts(title_opts=opts.TitleOpts(title="事件链词云图"))
+                
+            )
+    return wordcloud
 
-def process_data(frames,chains,bursty_dict):#所有事件
+def process_data(frames,chains,bursty_dict,colors_table,lengend_status=None):#所有事件
     #frames[[{event1},{event2}],[{event1},{event2}]]
     #chain{"key":[{event1}->{event2}->{event2}]}
+    #lengend_status: 图例被选中的状态
     line_data = {'x':[],'y':[]}#画折线图只要x轴和y轴的数据
     themeriver_data =[]       #[["第i帧数",事件链在第i帧举报数目,"事件链关键词"]]
     themreiver_lengend = []
+    wordcloud_data = {}
     pos = []#每条举报数据的位置
     idx = 1
     pos_idx = 0
+    numdocs_frame = {}#记录每一帧的举报数目
     for i in range(len(frames)):
-        frame = frames[i]
-        line_data['x'].append(str(i+1))#帧的序号,x轴是str类型
+        #frame = frames[i]
+        line_data['x'].append(str(i+1))#帧的序号,x轴是str类型 从1开始
+        '''
         y = 0
         for e in frame:
             y+=len(e["member_degree"])
         line_data['y'].append(y)#每帧的举报数目
+        '''
     #print(chains)
-    for k,v in chains.items():
+    #for k,v in chains.items():
+    if(lengend_status):
+        lengend_status = list(lengend_status.items())
+    for p in range(len(chains)):#p是第p条事件链
+        k = list(chains.keys())[p]
+        v = chains[k]
+        if(lengend_status and lengend_status[p][1]==False):#如果图例是false则不统计了
+            #print(lengend_status[p])
+            continue
         chain = v#[{},{},{}] ...
         abstract = " "+str(idx)+" "+str(round(bursty_dict[k],2))+" "  #每条事件链的摘要
         idx+=1
@@ -296,29 +346,57 @@ def process_data(frames,chains,bursty_dict):#所有事件
             keywords = e["community_keywords"]#array["","",""]
             lats = e["community_lats"]
             lons = e["community_lons"]
+            cons = e['community_contents']#举报内容
+            for k in range(len(cons)):
+                c = cons[k]
+                cl = list(c)
+                n_w = len(cl)
+                idx = int((n_w-1)/20)#每20个词分行
+                if(idx<1):
+                    continue
+                for i in range(idx):
+                    cl.insert((i+1)*20,"\n")
+                cons[k] = ''.join(cl)
+
             for k in keywords:
-                for w in k.split(" "):
+                for w in k.split(" "):#所有的词
                     temp.append(w)
+                    if(w not in wordcloud_data.keys()):
+                        wordcloud_data[w] = 1
+                    else:
+                        wordcloud_data[w]+=1
+
             for i in range(len(lats)):
                 la = lats[i]
                 lo = lons[i]
-                pos.append((str(pos_idx),la,lo))
+                pos.append((str(pos_idx),la,lo,colors_table[p],cons[i]))
                 pos_idx += 1
         C = np.array(collections.Counter(temp).most_common())#[("word":num)]
-        if(len(C)<20):
+        if(len(C)<25):
             e = len(C)
         else:
-            e = 20
+            e = 25#themeriver 显示25个词
         for i in range(e):
             abstract+=C[i][0]
             abstract+=" "#事件链的摘要
         themreiver_lengend.append(abstract)
         for e in chain:
             frame_id = str(e["community_frameid"]+1)
+            if(frame_id not in numdocs_frame.keys()):
+                numdocs_frame[frame_id] = e["community_docs"]
+            else:
+                numdocs_frame[frame_id] += e["community_docs"]
             num_docs = e["community_docs"]
             themeriver_data.append([frame_id,num_docs,abstract])
     #print(themreiver_lengend)
-    return line_data,themeriver_data,themreiver_lengend,pos
+    for i in range(len(frames)):
+        key = str(i+1)
+        if key in numdocs_frame:
+            line_data['y'].append(numdocs_frame[key])
+        else:
+            line_data['y'].append(0)
+    words = list(wordcloud_data.items())
+    return line_data,themeriver_data,themreiver_lengend,pos,words
 
 def preprocess_chains(chains,global_event=True):
     #chains : {key[{},{},{}]}
@@ -360,7 +438,10 @@ chainIdx = -1
 date_begin_old = ""
 date_end_old = ""
 timeInterval_old = -1
-def event_chain(request):
+bursty_dict = {}
+colors_table = []
+
+def event_chain_temp(request):
     global frames
     global chains
     global chainIdx
@@ -403,7 +484,7 @@ def event_chain(request):
     num_frames = int((time2timestamp(date_end)-time2timestamp(date_begin))/(3600*timeInterval))
     print("num_frames:{}".format(num_frames))
     #如果获得经度和维度,就可以在process.detect中删除不在这经度和维度范围内的数据 to do
-    if(date_begin_old!=date_begin or date_end_old !=date_end_old or timeInterval_old!=timeInterval):#如果有一个更新
+    if(date_begin_old!=date_begin or date_end_old !=date_end or timeInterval_old!=timeInterval):#如果有一个更新
         frames = process.detect(date_begin,3600*timeInterval,num_frames)
     #line_data = frames
     #不论是全城还是局部事件都要对chain做预处理操作，并且只返回前top20的事件链
@@ -413,18 +494,23 @@ def event_chain(request):
     date_end_old = date_end
     timeInterval_old = timeInterval
     #print(chain)
-    line_data,themeriver_data,themeriver_lengend, pos = process_data(frames,chains,bursty_dict)
-    page = Page()
+    line_data,themeriver_data,themeriver_lengend, pos,words = process_data(frames,chains,bursty_dict)
+    page = Page()#如果要让地图正常显示必须Page里配置为空 
     mymap = get_bmap(pos)
     #mymap = get_mymap(message)
     mymap.chart_id = "bmap_1"#
+    wordcloud = get_wordcloud(words)
+    wordcloud.chart_id = "wordcloud_1"
     myline = get_line(line_data)
     myline.chart_id = "line_1"
-    mythemeriver = get_themeriver(themeriver_data,themeriver_lengend)
+    mythemeriver = get_themeriver(themeriver_data,themeriver_lengend,num_frames)
     mythemeriver.chart_id = "themeriver_1"
+    
     # 需要自行调整每个 chart 的 height/width，显示效果在不同的显示器上可能不同
     page.add(mymap)
+    page.add(wordcloud)
     page.add(myline)
+    
     page.add(mythemeriver)
     page.render(template_name="simple_page_test.html")
     Page.save_resize_html("render.html", cfg_file="./demo/chart_config.json", dest="./demo/templates/my_new_charts.html")
@@ -484,8 +570,7 @@ def get_eventbmap(pos) -> BMap:
             baidu_ak=BAIDU_AK,
             center=[117.20, 39.12],
             zoom = 10,
-            is_roam=False,
-            
+            is_roam=False,  
     )
     sequence = []
     for i in range(len(pos)):
@@ -603,7 +688,7 @@ def get_wordcloud_line(words,frame_ids)->Line:
     for i in frame_ids:
         wordcloud = (
             WordCloud()
-            .add("", words, word_size_range=[20, 100])
+            .add("", words, word_size_range=[10, 100])
             .set_global_opts(title_opts=opts.TitleOpts(title="事件链词云图"))
             
         )
@@ -717,12 +802,115 @@ def get_gridbmap(message) -> BMap:
     )
     return c
 
+#def preprocess_chains_tempplates(chains,lengend_status,global_event=True):#按模板渲染的方式处理chains
+    #chains：事件链
+    #lengend_status: 图例状态
+
 def test(request):
-    #scatter = get_scatter()
-    eventmap = get_gridbmap(message="天津市地图")
-    eventmap.chart_id = 'bmap_test'
-    page = Page()
-    page.add(eventmap)
-    #eventmap.render("bmap.html")
-    #print(eventmap.bmap_js_functions)
-    return HttpResponse(page.render_embed())
+    return
+
+def event_chain(request):
+    request.encoding='utf-8'
+    global frames
+    global chains
+    global chainIdx
+    global date_begin_old
+    global date_end_old
+    global timeInterval_old
+    global bursty_dict
+    global colors_table
+    lengend_status = None
+    is_ajax = False#如果是ajax 要重新计算
+    #colors_table = getColor(24)
+
+    if request.method == 'POST' and request.is_ajax():
+        received_json_data = json.loads(request.body)#获得是一个dict 可以查看每个图例被选中的状态
+        is_ajax = True
+        if(received_json_data):
+            lengend_status = received_json_data["lengend_status"]
+
+    if(not is_ajax): #如果是ajax 即该变图例状态修渲染部分的话不用重新事件检测 
+        if(date_begin_old==""):
+            date_begin = "2015/11/10 00:00:00"
+        if(date_end_old==""):
+            date_end = "2015/11/12 00:00:00"
+        timeInterval = 24
+        #num_frames = 5
+        #如果有查询序号就执行查看event页面
+        if 'chainIdx' in request.GET and request.GET['chainIdx']:
+            chainIdx = int(request.GET['chainIdx'])-1#下标从0开始，所以要减一
+            return event(request)
+        if 'date_begin' in request.GET and request.GET['date_begin']:
+            date_begin = request.GET['date_begin']+" "+"00:00:00"
+            date_begin = date_begin.replace("-","/")
+            print("databigin:{}".format(date_begin))
+        if 'date_end' in request.GET and request.GET['date_end']:
+            date_end = request.GET['date_end']+" "+"00:00:00"
+            date_end = date_end.replace("-","/")
+            print("dataend:{}".format(date_end))
+
+        num_frames = int((time2timestamp(date_end)-time2timestamp(date_begin))/(3600*timeInterval))
+        print("num_frames:{}".format(num_frames))
+        #如果获得经度和维度,就可以在process.detect中删除不在这经度和维度范围内的数据 to do
+        if(date_begin_old!=date_begin or date_end_old !=date_end or timeInterval_old!=timeInterval):#如果有一个更新
+            frames = process.detect(date_begin,3600*timeInterval,num_frames)
+            chains = process.match(frames)
+            chains,bursty_dict = preprocess_chains(chains)#对chains做一些处理按bursty、glbal/local处理
+            colors_table = getColor(len(chains))#每条事件链都用不同的颜色标注
+            #不论是全城还是局部事件都要对chain做预处理操作，并且只返回前top20的事件链
+        date_begin_old = date_begin
+        date_end_old = date_end
+        timeInterval_old = timeInterval
+
+    line_data,themeriver_data,themeriver_lengend, pos,words = process_data(frames,chains,bursty_dict,colors_table,lengend_status)
+    wordcloud_data = []
+    bmap_data = []
+    for i in range(len(line_data['y'])):
+        y_temp = line_data['y'][i]
+        x_temp = line_data['x'][i]
+        line_data['y'][i]=[x_temp,y_temp]
+    for i in words:
+        wordcloud_data.append({"name":i[0],"value":i[1]})
+    for i in pos:
+        bmap_data.append({"name":i[0],"value":[i[2],i[1],i[4]],"itemStyle":{"color":i[3]}})
+
+    context = {"bmap_data":json.dumps(bmap_data),#用json将其转为字符串，同时模板中加入通道 | safe
+               "wordcloud_data":json.dumps(wordcloud_data),
+               "themeriver_data":json.dumps(themeriver_data),
+               "line_data":line_data,#好像对于字典这样的数据不用json.dumps啊
+               "themeriver_color":json.dumps(colors_table),
+               "mytitle":"天津城市突发性事件预警系统——NEW"}
+    if request.is_ajax():
+        data = {
+            "wordcloud_data":wordcloud_data,
+            "bmap_data":bmap_data,
+            "line_data":line_data,
+            "status":"success"}
+        response = JsonResponse(data)
+        return response
+    return render(request,"test.html",context)
+'''
+words = [
+    ("Sam S Club", 10000),
+    ("Macys", 6181),
+    ("Amy Schumer", 4386),
+    ("Jurassic World", 4055),
+    ("Charter Communications", 2467),
+    ("Chick Fil A", 2244),
+    ("Planet Fitness", 1868),
+    ("Pitch Perfect", 1484),
+    ("Express", 1112),
+    ("Home", 865),
+    ("Johnny Depp", 847),
+    ("Lena Dunham", 582),
+    ("Lewis Hamilton", 555),
+    ("KXAN", 550),
+    ("Mary Ellen Mark", 462),
+    ("Farrah Abraham", 366),
+    ("Rita Ora", 360),
+    ("Serena Williams", 282),
+    ("NCAA baseball tournament", 273),
+    ("Point Break", 265),
+    ]
+
+'''

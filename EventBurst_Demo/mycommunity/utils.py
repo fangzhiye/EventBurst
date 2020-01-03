@@ -2,7 +2,7 @@
 import time
 import datetime
 import pandas as pd
-
+import random
 num_typeerror = 0
 num_valueerror = 0
 
@@ -25,3 +25,17 @@ def timestamp2time(timestamp):
     time_local = time.localtime(timestamp)
     dt = time.strftime("%Y/%m/%d %H:%M:%S",time_local)
     return dt
+
+def getColor(num_colors=24):
+    ret = ["#c23531","#2f4554","#61a0a8","#d48265","#749f83","#ca8622","#bda29a","#6e7074","#546570","#c4ccd3","#f05b72","#ef5b9c","#f47920","#905a3d","#fab27b","#2a5caa","#444693","#726930","#b2d235","#6d8346","#ac6767","#1d953f","#6950a1","#918597"]
+    if(len(ret)>=num_colors):
+        return ret
+    for c in range(num_colors):
+        color = "#"
+        arr = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"]
+        for i in range(6):
+            num = random.randint(0,15)
+            color += arr[num]
+        ret.append(color)   
+    return ret#返回颜色表
+
