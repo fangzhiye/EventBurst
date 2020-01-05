@@ -1,44 +1,4 @@
-.node circle {
-  fill: gray;
-}
-.node text {
-  font: 13px sans-serif;
-}
-.merge circle {
-  fill: gray;
-  /*stroke: blueviolet;*/
-  stroke: green;
-}
-.merge text {
-  font: 13px sans-serif;
-}
-.node--internal circle {
-  /*fill: #555;*/
-  stroke: yellow;
-}
-.node--leaf circle {
-  /*fill: #555;*/
-  stroke: red;
-}
-.node--internal text {
-  text-shadow: 0 1px 0 #fff, 0 -1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff;
-}
-.link {
-  fill: none;
-  stroke: #555;
-  stroke-opacity: 0.4;
-  stroke-width: 1.5px;
-}
-
-.clink {
-  fill: none;
-  stroke: blue;
-  stroke-opacity: 0.4;
-  stroke-width: 2.5px;
-}
-.mlink {
-  fill: none;
-  stroke: #555;
-  stroke-opacity: 0.4;
-  stroke-width: 1.5px;
+.jumbotron {
+    padding-top: 1%;
+    padding-bottom: 1%;
 }

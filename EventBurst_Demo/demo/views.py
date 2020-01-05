@@ -347,16 +347,6 @@ def process_data(frames,chains,bursty_dict,colors_table,lengend_status=None):#�
             lats = e["community_lats"]
             lons = e["community_lons"]
             cons = e['community_contents']#举报内容
-            for k in range(len(cons)):
-                c = cons[k]
-                cl = list(c)
-                n_w = len(cl)
-                idx = int((n_w-1)/20)#每20个词分行
-                if(idx<1):
-                    continue
-                for i in range(idx):
-                    cl.insert((i+1)*20,"\n")
-                cons[k] = ''.join(cl)
 
             for k in keywords:
                 for w in k.split(" "):#所有的词
@@ -372,10 +362,10 @@ def process_data(frames,chains,bursty_dict,colors_table,lengend_status=None):#�
                 pos.append((str(pos_idx),la,lo,colors_table[p],cons[i]))
                 pos_idx += 1
         C = np.array(collections.Counter(temp).most_common())#[("word":num)]
-        if(len(C)<25):
+        if(len(C)<5):#lengend 5个词即可
             e = len(C)
         else:
-            e = 25#themeriver 显示25个词
+            e = 5#themeriver 显示25个词
         for i in range(e):
             abstract+=C[i][0]
             abstract+=" "#事件链的摘要
