@@ -705,6 +705,7 @@ def process_chain(chain):
         rigions = e["community_regions"]
         dates = e["community_dates"]
         contents = e["community_contents"]
+        cons = e['community_contents']
         for j in range(len(dates)):
             rows.append([str(j+1),dates[j],contents[j],rigions[j],round(lats[j],4),round(lons[j],4)])
         table_data.append(rows)
@@ -715,12 +716,13 @@ def process_chain(chain):
         for k in range(len(lats)):
             la = lats[k]
             lo = lons[k]
-            pos.append((lo,la))
+            con = cons[k]
+            pos.append((lo,la,con))
         poses.append(pos)
     return line_data,poses,words,frame_ids,table_data
             
 
-def event(request):
+def event_temp(request):
     print("query event")
     print(chainIdx)
     chain_keys = list(chains.keys())
@@ -754,6 +756,32 @@ def event(request):
     return render(request,"my_event_charts.html",context)#可以向模板中填充数据来显示矩形框
     #return HttpResponse(page.render_embed(template_name="simple_page_event.html"))
 
+def event(request):
+    print("query event")
+    print(chainIdx)
+    chain_keys = list(chains.keys())
+    chain= chains[chain_keys[int(chainIdx)]]#[{event1},{event2},{event3}]
+    context = {}
+    timelineIndex = 0
+    if 'timelineIndex' in request.GET and request.GET['timelineIndex']:#获得tl的index
+        context["timelineIndex"] = request.GET['timelineIndex']
+        timelineIndex = int(context["timelineIndex"])
+    if 'scrollTop' in request.GET and request.GET['scrollTop']:
+        context["scrollTop"] = request.GET['scrollTop']
+    line_data,poses,words,frame_ids,table_data = process_chain(chain)
+    bmap_data = []
+    for i in poses[timelineIndex]:
+        bmap_data.append({"value":[i[0],i[1],i[2]]})
+    for i in range(len(line_data['y'])):
+        y_temp = line_data['y'][i]
+        x_temp = line_data['x'][i]
+        line_data['y'][i]=[x_temp,y_temp]
+    print(bmap_data)
+    context = {"bmap_data":json.dumps(bmap_data),#用json将其转为字符串，同时模板中加入通道 | safe
+               "line_data":line_data
+    }
+    return render(request,"event.html",context)#可以向模板中填充数据来显示矩形框
+    #return HttpResponse(page.render_embed(template_name="simple_page_event.html"))
 
 def get_gridbmap(message) -> BMap:
     BAIDU_AK = "HOTBRAfU1jGcQKHBX15ucKsfZO722eyN"
@@ -820,10 +848,10 @@ def event_chain(request):
             lengend_status = received_json_data["lengend_status"]
 
     if(not is_ajax): #如果是ajax 即该变图例状态修渲染部分的话不用重新事件检测 
-        if(date_begin_old==""):
-            date_begin = "2015/11/10 00:00:00"
-        if(date_end_old==""):
-            date_end = "2015/11/12 00:00:00"
+        #if(date_begin_old==""):
+        date_begin = "2015/11/10 00:00:00"
+        #if(date_end_old==""):
+        date_end = "2015/11/12 00:00:00"
         timeInterval = 24
         #num_frames = 5
         #如果有查询序号就执行查看event页面
