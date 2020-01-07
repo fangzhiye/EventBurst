@@ -36,6 +36,7 @@ def getColor(num_colors=24):
         for i in range(6):
             num = random.randint(0,15)
             color += arr[num]
-        ret.append(color)   
+        ret.append(color) 
+    #ret.append("rgba(0,0,0,0)") #最后一个颜色是透明
     return ret#返回颜色表
 

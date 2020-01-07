@@ -321,7 +321,7 @@ def process_data(frames,chains,bursty_dict,colors_table,lengend_status=None):#�
     numdocs_frame = {}#记录每一帧的举报数目
     for i in range(len(frames)):
         #frame = frames[i]
-        line_data['x'].append(str(i+1))#帧的序号,x轴是str类型 从1开始
+        line_data['x'].append(str(i+1)+"帧")#帧的序号,x轴是str类型 从1开始
         '''
         y = 0
         for e in frame:
@@ -336,7 +336,16 @@ def process_data(frames,chains,bursty_dict,colors_table,lengend_status=None):#�
         k = list(chains.keys())[p]
         v = chains[k]
         if(lengend_status and lengend_status[p][1]==False):#如果图例是false则不统计了
-            #print(lengend_status[p])
+            chain = v
+            for e in chain:#事件链上的每个结点
+                lats = e["community_lats"]
+                lons = e["community_lons"]
+                cons = e['community_contents']#举报内容
+                for i in range(len(lats)):
+                    la = lats[i]
+                    lo = lons[i]
+                    pos.append((str(pos_idx),la,lo,"rgba(0,0,0,0)",cons[i]))#如果false变透明
+                    pos_idx += 1
             continue
         chain = v#[{},{},{}] ...
         abstract = " "+str(idx)+" "+str(round(bursty_dict[k],2))+" "  #每条事件链的摘要
@@ -347,20 +356,18 @@ def process_data(frames,chains,bursty_dict,colors_table,lengend_status=None):#�
             lats = e["community_lats"]
             lons = e["community_lons"]
             cons = e['community_contents']#举报内容
-
+            for i in range(len(lats)):
+                la = lats[i]
+                lo = lons[i]
+                pos.append((str(pos_idx),la,lo,colors_table[p],cons[i]))
+                pos_idx += 1
             for k in keywords:
                 for w in k.split(" "):#所有的词
                     temp.append(w)
                     if(w not in wordcloud_data.keys()):
                         wordcloud_data[w] = 1
                     else:
-                        wordcloud_data[w]+=1
-
-            for i in range(len(lats)):
-                la = lats[i]
-                lo = lons[i]
-                pos.append((str(pos_idx),la,lo,colors_table[p],cons[i]))
-                pos_idx += 1
+                        wordcloud_data[w]+=1    
         C = np.array(collections.Counter(temp).most_common())#[("word":num)]
         if(len(C)<5):#lengend 5个词即可
             e = len(C)
@@ -756,6 +763,7 @@ def event_temp(request):
     return render(request,"my_event_charts.html",context)#可以向模板中填充数据来显示矩形框
     #return HttpResponse(page.render_embed(template_name="simple_page_event.html"))
 
+
 def event(request):
     print("query event")
     print(chainIdx)
@@ -770,19 +778,34 @@ def event(request):
         context["scrollTop"] = request.GET['scrollTop']
     line_data,poses,words,frame_ids,table_data = process_chain(chain)
     bmap_data = []
+    wordcloud_data = []#[{"series":[{"data":[{"name:","value":}]}]}]
+    timeline_x = []
+    samples = []
+    for i in range(len(chain)):
+        timeline_x.append(str(i+1)+"帧")
     for i in poses[timelineIndex]:
         bmap_data.append({"value":[i[0],i[1],i[2]]})
     for i in range(len(line_data['y'])):
         y_temp = line_data['y'][i]
         x_temp = line_data['x'][i]
         line_data['y'][i]=[x_temp,y_temp]
-    print(bmap_data)
+    for wc in words:#得到key
+        temp={"series":[{"data":[]}]}
+        for w in wc:
+            temp["series"][0]["data"].append({"name":w[0],"value":w[1]})
+        wordcloud_data.append(temp)
+    for row in table_data[timelineIndex]:
+        samples.append({"report_id":row[0],"report_date":row[1],"report_text":row[2],"report_region":row[3],"report_lon":row[4],"report_lat":row[5]})
+ 
     context = {"bmap_data":json.dumps(bmap_data),#用json将其转为字符串，同时模板中加入通道 | safe
-               "line_data":line_data
+               "line_data":line_data,
+               "wordcloud_data":json.dumps(wordcloud_data),
+               "timeline_x":json.dumps(timeline_x),
+               "samples":samples,
+               "timeline_idx":timelineIndex
     }
     return render(request,"event.html",context)#可以向模板中填充数据来显示矩形框
     #return HttpResponse(page.render_embed(template_name="simple_page_event.html"))
-
 def get_gridbmap(message) -> BMap:
     BAIDU_AK = "HOTBRAfU1jGcQKHBX15ucKsfZO722eyN"
     pos = (117.20, 39.12)
@@ -848,10 +871,10 @@ def event_chain(request):
             lengend_status = received_json_data["lengend_status"]
 
     if(not is_ajax): #如果是ajax 即该变图例状态修渲染部分的话不用重新事件检测 
-        #if(date_begin_old==""):
-        date_begin = "2015/11/10 00:00:00"
-        #if(date_end_old==""):
-        date_end = "2015/11/12 00:00:00"
+        if(date_begin_old==""):
+            date_begin = "2015/11/10 00:00:00"
+        if(date_end_old==""):
+            date_end = "2015/11/12 00:00:00"
         timeInterval = 24
         #num_frames = 5
         #如果有查询序号就执行查看event页面
