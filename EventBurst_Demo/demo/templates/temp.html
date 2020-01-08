@@ -1,0 +1,193 @@
+{% load static %}
+<head>
+  <title>{{ cluster_name }}</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" type="text/css" href="{% static 'clusters/bootstrap.min.css' %}"> 
+  <script type="text/javascript" src="{% static 'clusters/echarts.common.min.js' %}"></script>
+  <script type="text/javascript" src="{% static 'clusters/echarts-wordcloud.min.js' %}"></script>
+  <script type="text/javascript" src="{% static 'clusters/jquery.min.js' %}"></script>
+  <script type="text/javascript" src="{% static 'clusters/bootstrap.min.js' %}"></script>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="navbar-brand"><h3><strong> {{ cluster_name }} ({{ cluster_size }}) </strong></h3> </div>
+      <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navbarsDetail" aria-controls="navbarsDetail" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarsDetail">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item active">
+            <a class="nav-link" href="#">数据概况 <span class="sr-only">(current)</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'cluster_spatial_temporal' cluster_name %}">时空分布 </a>
+          </li>
+        </ul>
+        
+      </div>
+
+      
+    </nav>
+    <br/>
+
+<div class="container-fluid">
+  <!-- <div class="row clearfix">
+        <div class="col-md-12 column"> -->
+            <div class="row clearfix">
+                <div class="col-md-6 column">
+                    <div  id="cluster-tfidf-wordscloud" class="border" style="width: 100%;height:600px;">
+                    </div>
+                </div>
+                <div class="col-md-6 column">
+                    <div  id="cluster-bows-wordscloud" class="border" style="width: 100%;height:600px;">
+                    </div>
+                </div>
+            </div>
+            <br/>
+            <div class="row clearfix">
+                <div class="col-md-12 column">
+                    <div class="border">
+                        <table class="table table-bordered" style="font-size:11px">
+                          <thead>
+                            <tr>
+                              <th scope="col">ID</th>
+                              <th scope="col" width="60%">描述</th>
+                              <th scope="col">时间</th>
+                              <th scope="col">地点</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {% for sample in cluster_samples %}
+                              <tr>
+                                  <th scope="row">{{ sample.report_id|safe }}</th>
+                                  <td>{{ sample.report_text|safe }}</td>
+                                  <td>{{ sample.report_time|safe }}</td>
+                                  <td>{{ sample.report_loc|safe }}</td>
+                              </tr>
+                            {% endfor %}
+                            <!-- <tr>
+                              <th scope="row">1</th>
+                              <td>Mark</td>
+                              <td>Otto</td>
+                              <td>@mdo</td>
+                            </tr> -->
+                            <tr>
+                              <th scope="row">......</th>
+                              <td>......</td>
+                              <td>......</td>
+                              <td>......</td>
+                            </tr>
+                            
+                          </tbody>
+                        </table>
+                    </div>
+           
+
+
+                </div>
+            </div>
+        <!-- </div>
+    </div> -->
+</div>
+    <script type="text/javascript">
+      var g;
+      g = document.getElementById("cluster-tfidf-wordscloud");
+      g.style.height = (window.innerWidth-100)/3;
+      g = document.getElementById("cluster-bows-wordscloud");
+      g.style.height = (window.innerWidth-100)/3;
+      console.log(window.innerWidth);
+    </script>
+     <script type="text/javascript">
+        // based on prepared DOM, initialize echarts instance
+        var myChart = echarts.init(document.getElementById('cluster-tfidf-wordscloud'),'', {devicePixelRatio:2});
+        // specify chart configuration item and data
+        var option = {
+            title : {
+                text: 'TF-IDF',
+                x:'center',
+                bottom:50
+            },
+            tooltip: {},
+            series: [ {
+                type: 'wordCloud',
+                gridSize: 12,
+                sizeRange: [15, 75],
+                rotationRange: [-90, 90],
+                shape: 'circle',
+                width: 700,
+                height: 400,
+                top:20,
+                bottom: 100,
+                drawOutOfBound: true,
+                textStyle: {
+                    normal: {
+                        color: function () {
+                            return 'rgb(' + [
+                                Math.round(Math.random() * 160),
+                                Math.round(Math.random() * 160),
+                                Math.round(Math.random() * 160)
+                            ].join(',') + ')';
+                        }
+                    },
+                    emphasis: {
+                        shadowBlur: 10,
+                        shadowColor: '#333'
+                    }
+                },
+                data: {{ cluster_tfidf|safe }}
+
+            } ]
+        };
+        myChart.setOption(option);
+    </script>
+    <script type="text/javascript">
+        // based on prepared DOM, initialize echarts instance
+        var myChart = echarts.init(document.getElementById('cluster-bows-wordscloud'),'', {devicePixelRatio:2});
+        // specify chart configuration item and data
+        var option = {
+            title : {
+                text: 'BOWS',
+                x:'center',
+                bottom:50
+            },
+            tooltip: {},
+            series: [ {
+                type: 'wordCloud',
+                gridSize: 12,
+                sizeRange: [15, 75],
+                rotationRange: [-90, 90],
+                shape: 'circle',
+                width: 700,
+                height: 400,
+                top:20,
+                bottom: 100,
+                drawOutOfBound: true,
+                textStyle: {
+                    normal: {
+                        color: function () {
+                            return 'rgb(' + [
+                                Math.round(Math.random() * 160),
+                                Math.round(Math.random() * 160),
+                                Math.round(Math.random() * 160)
+                            ].join(',') + ')';
+                        }
+                    },
+                    emphasis: {
+                        shadowBlur: 10,
+                        shadowColor: '#333'
+                    }
+                },
+                data: {{ cluster_bows|safe }}
+
+            } ]
+        };
+        myChart.setOption(option);
+    </script>
+
+
+</body>
+
+

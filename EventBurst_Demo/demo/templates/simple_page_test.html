@@ -1,0 +1,170 @@
+{% import 'macro' as macro %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ chart.page_title }}</title>
+    {{ macro.render_chart_dependencies(chart) }}
+    {{ macro.render_chart_css(chart) }}
+</head>
+<body>
+    <h1 align="center" class="text-light" style="background:rgb(53,58,64)">
+            <font color="white" size="6"> 天津城市突发性事件预警系统</font>
+    </h1>
+    <form action="/demo/event_chain" method="get" target="_blank" id = "parmform" onsubmit="setCookie()">
+        <fieldset>
+            <legend>参数信息</legend>
+            起始时间 <input type="date" id="myDate_begin" value="" name="date_begin">
+            结束时间 <input type="date" id="myDate_end" value="" name="date_end">
+            时间间隔(h) <input type="text" name="timeInterval" value="24" size="1">
+            网格大小(km) <input type="text" name="gridSize" value="" size="1">
+            查询序号 <input type="text" id="chainIdx" name="chainIdx" value="" size="1">
+            <select name="mode" id="event_mode" onchange="select_option()">
+                <option value="globalEvent">全局事件</option>
+                <option value="localEvent">局部事件</option>
+                <option value="region">选择区域</option>
+            </select>
+            <input type="submit" value="运行" >
+        </fieldset>
+    </form>
+    <style>
+        .box { {{ chart.layout }} };
+        #parent_region{width: 492px;height: 384px;border: 1px solid black;margin: 0px auto;position: relative;}
+        #myregion{border: 1px solid green;position: absolute;pointer-events:none} 
+    </style>
+    {% if chart.download_button %}
+        <button onclick="downloadCfg()">Save Config</button>
+    {% endif %}
+    <div class="box">
+        {% for c in chart %}
+            {% if c._component_type in ("table", "image") %}
+                {{ macro.gen_components_content(c) }}
+            {% else %}
+                {{ macro.render_chart_content(c) }}
+            {% endif %}
+            {% for _ in range(chart.page_interval) %}<br/>{% endfor %}
+        {% endfor %}
+    </div>
+    <script>
+        {% for js in chart.js_functions.items %}
+            {{ js }}
+        {% endfor %}
+
+        var bmap = chart_bmap_1.getModel().getComponent('bmap').getBMap();
+        bmap.addEventListener("click", function(e){     
+            console.log("lat")
+        });
+        //如何保证有lat log还有矩形
+        function md(ev) {
+               if(ev.button!=2)
+                 return
+               //console.log(isfinish)
+               var oBox = document.getElementById("bmap_1");
+               console.log("mouse down")
+               ev = window.event || ev;
+                //1.获取按下的点
+               var x1 = ev.clientX - oBox.offsetLeft;
+               var y1 = ev.clientY - oBox.offsetTop; 
+                //2.创建div
+               var oDiv = document.createElement("div");
+               oDiv.setAttribute("id","myregion")
+               var c = oBox.children;
+               var i;
+               for (i = 0; i < c.length; i++) {
+                    if(c[i].id=="myregion"){
+                        oBox.replaceChild(oDiv,c[i])
+                        break
+                    }     
+                }
+                if(i==c.length){
+                    oBox.appendChild(oDiv)
+                    isfinish = true;
+                }
+                    
+                function mm(ev) {
+                   ev = window.event || ev;
+                   var x2 = ev.clientX - oBox.offsetLeft;
+                   var y2 = ev.clientY - oBox.offsetTop;
+                   //3.设置div的样式
+                   oDiv.style.left = (x2 > x1 ? x1 : x2) +"px"; 
+                   oDiv.style.top = (y2 > y1 ? y1 : y2) +"px";
+                   oDiv.style.width = Math.abs(x2-x1)+"px";
+                   oDiv.style.height =Math.abs(y2-y1)+"px";
+               }
+               oBox.onmousemove = mm
+               return false;  //解除在划动过程中鼠标样式改变的BUG
+           }
+        //var num_region = 0//框的个数
+        function select_option(){
+            var myoption = document.getElementById("event_mode").value
+            console.log("select my region")
+            console.log(myoption)
+            var oBox = document.getElementById("bmap_1");
+            if(myoption!="region"){//只有region模式才能选框
+                oBox.removeEventListener("mousedown",md,false)
+                console.log("remove md")
+                var c = oBox.children;
+                var i;
+                for (i = 0; i < c.length; i++) {
+                    if(c[i].id=="myregion"){
+                        oBox.removeChild(c[i])
+                        break
+                    }     
+                }
+                //oBox.removeEventListener("mousemove",mm)
+                return
+            }
+            console.log("select region")
+            
+           oBox.addEventListener("mousedown",md,false)
+           //在鼠标抬起后终止onmousemove事件
+           document.onmouseup =  function(ev) {
+               oBox.onmousemove = null;  
+           }
+            
+        }
+        window.onload = function () {//文档内容全部加载完触发事件
+            setDate();//cookie上的查询日期做为input日期
+            //select_option();
+        }
+        function setCookie() {//将当前的查询时间至于cookie
+              console.log("设置setCookie");
+              var  last_date_begin = document.getElementById("myDate_begin").value
+              var  last_date_end = document.getElementById("myDate_end").value//这样获得value值
+              var  name = document.getElementById("myDate_end").getAttribute("name")
+              var is_chainidx = document.getElementById("chainIdx")
+              console.log(is_chainidx)
+              if(is_chainidx.value=="") //如果是查询具体的事件开新的页面
+                document.getElementById("parmform").setAttribute("target","")
+              else//否则不开新页面
+                document.getElementById("parmform").setAttribute("target","_blank")
+              document.cookie = "date_begin"+"="+last_date_begin+";"
+              document.cookie = "date_end"+"="+last_date_end+";"
+              return true
+        }
+        function setDate(){
+            var last_begin = getCookie("date_begin")//从cookie中获取数据,加载的时候
+            var last_end = getCookie("date_end")
+            console.log("cookie information")
+            console.log(last_begin)
+            console.log(last_end)
+            if(last_begin=="")
+                last_begin = "2015-11-10"
+            document.getElementById("myDate_begin").setAttribute("value",last_begin)
+            if(last_end=="")
+                last_end = "2015-11-12"
+            document.getElementById("myDate_end").setAttribute("value",last_end)
+        }
+        function getCookie(cname){
+            var name = cname + "=";
+            var ca = document.cookie.split(';');
+            for(var i=0; i<ca.length; i++) 
+            {
+                var c = ca[i].trim();
+                if (c.indexOf(name)==0) return c.substring(name.length,c.length);
+            }
+            return "";
+        }
+    </script>
+</body>
+</html>

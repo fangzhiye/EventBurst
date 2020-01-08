@@ -1,0 +1,27 @@
+<body>
+<form  method="get"  id = "parmform" onsubmit="setCookie()" >
+    <fieldset>
+        <legend>参数信息</legend>
+        起始时间 <input type="date" id="myDate_begin" value="" name="date_begin">
+        结束时间 <input type="date" id="myDate_end" value="" name="date_end">
+        时间间隔(h) <input type="text" name="timeInterval" value="24" size="1">
+        网格大小(km) <input type="text" name="gridSize" value="" size="1">
+        查询序号 <input type="text" id="chainIdx" name="chainIdx" value="" size="1">
+        <select name="mode">
+            <option value="globalEvent">全局事件</option>
+            <option value="localEvent">局部事件</option>
+            <option value="rigion">选择区域</option>
+        </select>
+        <input type="submit" value="运行"  >
+    </fieldset>
+</form>
+</body>
+<script>
+    function setCookie(){
+        console.log("submit test")
+        var  last_date_begin = document.getElementById("myDate_begin").value
+        console.log(last_date_begin)
+        return true
+    }
+    
+</script>

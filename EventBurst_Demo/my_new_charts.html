@@ -1,0 +1,421 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Awesome-pyecharts</title>
+    
+        <script type="text/javascript" src="https://assets.pyecharts.org/assets/echarts.min.js"></script>
+    
+        <script type="text/javascript" src="https://assets.pyecharts.org/assets/maps/tianjin.js"></script>
+    
+        <script type="text/javascript" src="https://assets.pyecharts.org/assets/jquery.min.js"></script>
+    
+        <script type="text/javascript" src="https://assets.pyecharts.org/assets/jquery-ui.min.js"></script>
+    
+        <script type="text/javascript" src="https://assets.pyecharts.org/assets/ResizeSensor.js"></script>
+    
+    
+        <link rel="stylesheet"  href="https://assets.pyecharts.org/assets/jquery-ui.css">
+    
+</head>
+<body>
+    <style>.box {  }; </style>
+    
+        
+    
+    <div class="box">
+        
+            
+                <div id="map_1" class="chart-container" style="position: absolute; width: 516px; height: 500px; top: 131.5px; left: 8px;"></div>
+    <script>
+        var chart_map_1 = echarts.init(
+            document.getElementById('map_1'), 'white', {renderer: 'canvas'});
+        
+        var option_map_1 = {
+    "animation": true,
+    "animationThreshold": 2000,
+    "animationDuration": 1000,
+    "animationEasing": "cubicOut",
+    "animationDelay": 0,
+    "animationDurationUpdate": 300,
+    "animationEasingUpdate": "cubicOut",
+    "animationDelayUpdate": 0,
+    "color": [
+        "#c23531",
+        "#2f4554",
+        "#61a0a8",
+        "#d48265",
+        "#749f83",
+        "#ca8622",
+        "#bda29a",
+        "#6e7074",
+        "#546570",
+        "#c4ccd3",
+        "#f05b72",
+        "#ef5b9c",
+        "#f47920",
+        "#905a3d",
+        "#fab27b",
+        "#2a5caa",
+        "#444693",
+        "#726930",
+        "#b2d235",
+        "#6d8346",
+        "#ac6767",
+        "#1d953f",
+        "#6950a1",
+        "#918597"
+    ],
+    "series": [
+        {
+            "type": "scatter",
+            "name": "geo",
+            "coordinateSystem": "geo",
+            "symbolSize": 12,
+            "data": [
+                {
+                    "name": "\u6d4b\u8bd5\u70b9",
+                    "value": [
+                        117.2,
+                        39.12,
+                        51
+                    ]
+                }
+            ],
+            "label": {
+                "show": true,
+                "position": "top",
+                "margin": 8
+            },
+            "rippleEffect": {
+                "show": true,
+                "brushType": "stroke",
+                "scale": 2.5,
+                "period": 4
+            }
+        }
+    ],
+    "legend": [
+        {
+            "data": [
+                "geo"
+            ],
+            "selected": {
+                "geo": true
+            },
+            "show": true
+        }
+    ],
+    "tooltip": {
+        "show": true,
+        "trigger": "item",
+        "triggerOn": "mousemove|click",
+        "axisPointer": {
+            "type": "line"
+        },
+        "formatter": function (params) {        return params.name + ' : ' + params.value[2];    },
+        "textStyle": {
+            "fontSize": 14
+        },
+        "borderWidth": 0
+    },
+    "title": [
+        {
+            "text": "\u52a0\u5165\u81ea\u5b9a\u4e49\u7684\u70b9"
+        }
+    ],
+    "geo": {
+        "map": "\u5929\u6d25",
+        "roam": true,
+        "emphasis": {}
+    }
+};
+        chart_map_1.setOption(option_map_1);
+        
+    </script>
+            
+            <br/>
+        
+            
+                <div id="line_1" class="chart-container" style="position: absolute; width: 519px; height: 500px; top: 131.5px; left: 612px;"></div>
+    <script>
+        var chart_line_1 = echarts.init(
+            document.getElementById('line_1'), 'white', {renderer: 'canvas'});
+        
+        var option_line_1 = {
+    "animation": true,
+    "animationThreshold": 2000,
+    "animationDuration": 1000,
+    "animationEasing": "cubicOut",
+    "animationDelay": 0,
+    "animationDurationUpdate": 300,
+    "animationEasingUpdate": "cubicOut",
+    "animationDelayUpdate": 0,
+    "color": [
+        "#c23531",
+        "#2f4554",
+        "#61a0a8",
+        "#d48265",
+        "#749f83",
+        "#ca8622",
+        "#bda29a",
+        "#6e7074",
+        "#546570",
+        "#c4ccd3",
+        "#f05b72",
+        "#ef5b9c",
+        "#f47920",
+        "#905a3d",
+        "#fab27b",
+        "#2a5caa",
+        "#444693",
+        "#726930",
+        "#b2d235",
+        "#6d8346",
+        "#ac6767",
+        "#1d953f",
+        "#6950a1",
+        "#918597"
+    ],
+    "series": [
+        {
+            "type": "line",
+            "name": "\u5546\u5bb6A",
+            "connectNulls": false,
+            "symbolSize": 4,
+            "showSymbol": true,
+            "smooth": false,
+            "step": false,
+            "data": [
+                [
+                    "\u8349\u8393",
+                    108
+                ],
+                [
+                    "\u8292\u679c",
+                    98
+                ],
+                [
+                    "\u8461\u8404",
+                    79
+                ],
+                [
+                    "\u96ea\u68a8",
+                    20
+                ],
+                [
+                    "\u897f\u74dc",
+                    87
+                ],
+                [
+                    "\u67e0\u6aac",
+                    106
+                ],
+                [
+                    "\u8f66\u5398\u5b50",
+                    30
+                ]
+            ],
+            "hoverAnimation": true,
+            "label": {
+                "show": true,
+                "position": "top",
+                "margin": 8
+            },
+            "lineStyle": {
+                "width": 1,
+                "opacity": 1,
+                "curveness": 0,
+                "type": "solid"
+            },
+            "areaStyle": {
+                "opacity": 0
+            }
+        },
+        {
+            "type": "line",
+            "name": "\u5546\u5bb6B",
+            "connectNulls": false,
+            "symbolSize": 4,
+            "showSymbol": true,
+            "smooth": false,
+            "step": false,
+            "data": [
+                [
+                    "\u8349\u8393",
+                    85
+                ],
+                [
+                    "\u8292\u679c",
+                    135
+                ],
+                [
+                    "\u8461\u8404",
+                    128
+                ],
+                [
+                    "\u96ea\u68a8",
+                    61
+                ],
+                [
+                    "\u897f\u74dc",
+                    75
+                ],
+                [
+                    "\u67e0\u6aac",
+                    141
+                ],
+                [
+                    "\u8f66\u5398\u5b50",
+                    114
+                ]
+            ],
+            "hoverAnimation": true,
+            "label": {
+                "show": true,
+                "position": "top",
+                "margin": 8
+            },
+            "lineStyle": {
+                "width": 1,
+                "opacity": 1,
+                "curveness": 0,
+                "type": "solid"
+            },
+            "areaStyle": {
+                "opacity": 0
+            }
+        }
+    ],
+    "legend": [
+        {
+            "data": [
+                "\u5546\u5bb6A",
+                "\u5546\u5bb6B"
+            ],
+            "selected": {
+                "\u5546\u5bb6A": true,
+                "\u5546\u5bb6B": true
+            },
+            "show": true,
+            "right": "20%"
+        }
+    ],
+    "tooltip": {
+        "show": true,
+        "trigger": "item",
+        "triggerOn": "mousemove|click",
+        "axisPointer": {
+            "type": "line"
+        },
+        "textStyle": {
+            "fontSize": 14
+        },
+        "borderWidth": 0
+    },
+    "xAxis": [
+        {
+            "show": true,
+            "scale": false,
+            "nameLocation": "end",
+            "nameGap": 15,
+            "gridIndex": 0,
+            "inverse": false,
+            "offset": 0,
+            "splitNumber": 5,
+            "minInterval": 0,
+            "splitLine": {
+                "show": false,
+                "lineStyle": {
+                    "width": 1,
+                    "opacity": 1,
+                    "curveness": 0,
+                    "type": "solid"
+                }
+            },
+            "data": [
+                "\u8349\u8393",
+                "\u8292\u679c",
+                "\u8461\u8404",
+                "\u96ea\u68a8",
+                "\u897f\u74dc",
+                "\u67e0\u6aac",
+                "\u8f66\u5398\u5b50"
+            ]
+        }
+    ],
+    "yAxis": [
+        {
+            "show": true,
+            "scale": false,
+            "nameLocation": "end",
+            "nameGap": 15,
+            "gridIndex": 0,
+            "inverse": false,
+            "offset": 0,
+            "splitNumber": 5,
+            "minInterval": 0,
+            "splitLine": {
+                "show": false,
+                "lineStyle": {
+                    "width": 1,
+                    "opacity": 1,
+                    "curveness": 0,
+                    "type": "solid"
+                }
+            }
+        }
+    ],
+    "title": [
+        {
+            "text": "Grid-Line",
+            "right": "5%"
+        }
+    ]
+};
+        chart_line_1.setOption(option_line_1);
+        
+    </script>
+            
+            <br/>
+        
+    </div>
+    <script>
+        
+            $('#map_1').css('border-style', 'dashed').css('border-width', '0px');$("#map_1>div:nth-child(1)").width("100%").height("100%");
+        
+            new ResizeSensor(jQuery('#map_1'), function() { chart_map_1.resize()});
+        
+            $('#line_1').css('border-style', 'dashed').css('border-width', '0px');$("#line_1>div:nth-child(1)").width("100%").height("100%");
+        
+            new ResizeSensor(jQuery('#line_1'), function() { chart_line_1.resize()});
+        
+            var charts_id = ['map_1','line_1'];
+function downloadCfg () {
+    const fileName = 'chart_config.json'
+    let downLink = document.createElement('a')
+    downLink.download = fileName
+
+    let result = []
+    for(let i=0; i<charts_id.length; i++) {
+        chart = $('#'+charts_id[i])
+        result.push({
+            cid: charts_id[i],
+            width: chart.css("width"),
+            height: chart.css("height"),
+            top: chart.offset().top + "px",
+            left: chart.offset().left + "px"
+        })
+    }
+
+    let blob = new Blob([JSON.stringify(result)])
+    downLink.href = URL.createObjectURL(blob)
+    document.body.appendChild(downLink)
+    downLink.click()
+    document.body.removeChild(downLink)
+}
+        
+    </script>
+</body>
+</html>

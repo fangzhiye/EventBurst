@@ -1,0 +1,61 @@
+{% import 'macro' as macro %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ chart.page_title }}</title>
+    {{ macro.render_chart_dependencies(chart) }}
+    {{ macro.render_chart_css(chart) }}
+</head>
+<body>
+
+    <h1 align="center" class="text-light" style="background:rgb(53,58,64)">
+            <font color="white" size="6"> 天津市城市突发性事件预警系统</font>
+    </h1>
+    <style>.box { {{ chart.layout }} }; </style>
+    {% if chart.download_button %}
+        <button onclick="downloadCfg()">Save Config</button>
+    {% endif %}
+    <div class="box">
+        {% for c in chart %}
+            {% if c._component_type in ("table", "image") %}
+                {{ macro.gen_components_content(c) }}
+            {% else %}
+                {{ macro.render_chart_content(c) }}
+            {% endif %}
+            {% for _ in range(chart.page_interval) %}<br/>{% endfor %}
+        {% endfor %}
+    
+    </div>
+    
+    <script>
+        {% for js in chart.js_functions.items %}
+            {{ js }}
+        {% endfor %}
+        option_wordcloud_line.baseOption.timeline.currentIndex = {{timelineidx}}//设置tl的位置
+        document.documentElement.scrollTop = {{scrollTop}}//设置滚动的位置
+
+        chart_wordcloud_line.setOption(option_wordcloud_line);
+        chart_wordcloud_line.on('timelinechanged', function (timeLineIndex) {  
+            
+            var myForm = document.createElement("form");  
+            myForm.method = "get";  
+            myForm.action = "/demo/event";    
+            var myInput = document.createElement("input"); //向服务器发送tl的idx 
+            myInput.setAttribute("name", "timelineIndex"); 
+            myInput.setAttribute("value",timeLineIndex.currentIndex);
+            myForm.appendChild(myInput); 
+            scTop = document.documentElement.scrollTop;
+            var myInput2 = document.createElement("input"); 
+            myInput2.setAttribute("name", "scrollTop"); 
+            myInput2.setAttribute("value",scTop);//有两个输入要两个input结点
+            myForm.appendChild(myInput2);   
+            document.body.appendChild(myForm);  
+            myForm.submit();  
+            document.body.removeChild(myForm); 
+           
+        });
+
+    </script>
+</body>
+</html>

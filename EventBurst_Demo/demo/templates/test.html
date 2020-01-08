@@ -1,0 +1,625 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{mytitle}}</title>
+	<script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="{% static 'clusters/bootstrap.min.css' %}"> 
+    <script type="text/javascript" src="{% static 'clusters/bootstrap.min.js' %}"></script>
+    <link rel="stylesheet" type="text/css" href="{% static 'clusters/index.css' %}"> 
+    <script type="text/javascript" src="https://assets.pyecharts.org/assets/echarts.min.js"></script>
+    <script type="text/javascript" src="https://assets.pyecharts.org/assets/bmap.min.js"></script>
+    <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=HOTBRAfU1jGcQKHBX15ucKsfZO722eyN"></script>
+    <script type="text/javascript" src="http://api.map.baidu.com/getscript?v=2.0&ak=HOTBRAfU1jGcQKHBX15ucKsfZO722eyN"></script>
+    <script type="text/javascript" src="https://assets.pyecharts.org/assets/echarts-wordcloud.min.js"></script> 
+    <script type="text/javascript" src="{% static 'clusters/jquery.min.js' %}"></script>
+    <style>
+        h1{
+            font-size:20px;
+        }
+    </style>
+
+
+</head>
+<body>
+    <!--
+    <h1 align="center" class="text-light" style="background:rgb(53,58,64)">
+            <font color="white" size="6"> 天津城市突发性事件预警系统</font>
+    </h1>
+    
+      -->
+<div class="jumbotron well bg-dark row"><!--index.css中可以设置其大小-->  
+    <div class="col-md-11">
+        <h1 align="center" class="text-light">
+            天津城市突发性事件预警系统 
+        </h1>
+    </div>
+    <div class="col-md-1" >
+        <button type="button" class="btn btn-sm" data-toggle="collapse" 
+		data-target="#demo">
+	        参数
+        </button>
+    </div>
+</div>
+<div id="demo" class="collapse in bg-white" style="z-index:9999;left:75%;width:30%;position:absolute;">
+    <form class="form-horizontal center-block" role="form" action="/demo/event_chain" method="get" target="_blank" id = "parmform" onsubmit="setCookie()">
+        <legend align="center">参数设置</legend>
+            <div class="form-group">
+            <label class="col-sm-4 control-label" for="ds_host">起始时间</label>
+            <div  class="col-sm-8 ">
+               <input class="form-control" id="ds_host" type="date" value="2015-11-10" id="myDate_begin" name="date_begin"/>
+            </div>
+            </div>
+            <div class="form-group ">
+            <label class="col-sm-4 control-label" for="ds_host">结束时间</label>
+            <div class="col-sm-8">
+               <input class="form-control" id="ds_host" type="date" value="2015-11-12" id="myDate_end" name="date_end"/>
+            </div>
+            </div>
+            <div class="form-group ">
+                <label class="col-sm-4 control-label" for="ds_host">时间间隔</label>
+                <div class="col-sm-8">
+                   <input class="form-control" id="ds_host" type="text" placeholder="小时(默认24h)" name="timeInterval"/>
+                </div>
+            </div>
+            <div class="form-group ">
+                <label class="col-sm-4 control-label" for="ds_host">区域大小</label>
+                <div class="col-sm-8">
+                   <input class="form-control" id="ds_host" type="text" placeholder="千米(默认1km)" name="gridSize"/>
+                </div>
+            </div>
+            <div class="form-group ">
+                <label class="col-sm-4 control-label" for="ds_host">事件序号</label>
+                <div class="col-sm-8">
+                   <input class="form-control" id="ds_host" type="text" placeholder="请输入事件链序号" id="chainIdx" name="chainIdx"/>
+                </div>
+            </div>
+         <div class="form-group ">
+         <label class="col-sm-4 control-label" for="ds_host">事件类型</label>
+        <div class="col-sm-8">
+           <select class="form-control" id="event_mode" onchange="select_option()" >
+              <option value="globalEvent">全局事件</option>
+              <option value="localEvent">局部事件</option>
+              <option value="region">自选区域</option>
+           </select>
+        </div>
+        </div>
+      <div class="form-group ">
+        <div >
+            <input class="btn btn-default" id="ds_host" type="submit" value="运行" style="left:40%;position: relative;"/>   
+        </div>
+        </div>
+    </form>
+</div>
+
+    <!--
+    <form action="/demo/event_chain" method="get" target="_blank" id = "parmform" onsubmit="setCookie()">
+        <fieldset>
+            <legend>参数信息</legend>
+            起始时间 <input type="date" id="myDate_begin" value="" name="date_begin">
+            结束时间 <input type="date" id="myDate_end" value="" name="date_end">
+            时间间隔(h) <input type="text" name="timeInterval" value="24" size="1">
+            网格大小(km) <input type="text" name="gridSize" value="" size="1">
+            查询序号 <input type="text" id="chainIdx" name="chainIdx" value="" size="1">
+            <select name="mode" id="event_mode" onchange="select_option()">
+                <option value="globalEvent">全局事件</option>
+                <option value="localEvent">局部事件</option>
+                <option value="region">选择区域</option>
+            </select>
+            <input type="submit" value="运行" >
+        </fieldset>
+    </form>
+    -->
+    <style>
+        .box {};
+        #parent_region{width: 492px;height: 384px;border: 1px solid black;margin: 0px auto;position: relative;}
+        #myregion{border: 1px solid green;position: absolute;pointer-events:none} 
+    </style> 
+    <div class="box">
+        <div id="bmap" class="chart-container border" style="z-index:10;width:480px; height:370px; top:8%; left:10px;position: absolute;" >
+            
+        </div>
+        <div id="wordcloud" class="chart-container " style="width:470px; height:370px; top:100px; left:630px; position: absolute;" ></div>
+        <div id="line" class="chart-container border" style="width:480px; height:370px; top:65px; left:500px;position: absolute;"></div>
+        <div id="themeriver" class="chart-container border" style="width:970px; height:380px; top:440px; left:10px;position: absolute;"></div>
+    <script>
+        
+        var chart_bmap = echarts.init(
+            document.getElementById('bmap'), 'white', {renderer: 'canvas'});
+    var option_bmap = {
+    "series": [
+        {
+            "type": "scatter",
+            "name": "举报坐标",
+            "coordinateSystem": "bmap",
+            "symbolSize": 6,
+            "data": {{ bmap_data|safe }},
+            /***
+            "data":[
+                {
+                    "name": "1194",
+                    "value": [
+                        117.136015,
+                        39.092334,
+                        5
+                    ]
+                }
+            ],
+            ***/
+        }
+    ],
+    toolbox: {
+        feature: {
+            myTool1: {
+                show: true,
+                title: '地图全屏',
+                icon: 'path://M432.45,595.444c0,2.177-4.661,6.82-11.305,6.82c-6.475,0-11.306-4.567-11.306-6.82s4.852-6.812,11.306-6.812C427.841,588.632,432.452,593.191,432.45,595.444L432.45,595.444z M421.155,589.876c-3.009,0-5.448,2.495-5.448,5.572s2.439,5.572,5.448,5.572c3.01,0,5.449-2.495,5.449-5.572C426.604,592.371,424.165,589.876,421.155,589.876L421.155,589.876z M421.146,591.891c-1.916,0-3.47,1.589-3.47,3.549c0,1.959,1.554,3.548,3.47,3.548s3.469-1.589,3.469-3.548C424.614,593.479,423.062,591.891,421.146,591.891L421.146,591.891zM421.146,591.891',
+                onclick: fullscreen,
+            },
+        },
+      "right":"10px",
+      "bottom":"10px",
+    },
+    "bmap": {
+        "center": [
+            117.2,
+            39.12
+        ],
+        "zoom": 10,
+        "roam": true
+        },
+
+
+    "tooltip": {
+        "show": true,
+        "trigger": "item",
+        "triggerOn": "mousemove|click",
+        "axisPointer": {
+            "type": "line"
+        },
+        "textStyle": {
+            "fontSize": 14
+        },
+        "borderWidth": 0,
+       	formatter:function(params){
+    		var s='';
+    		s+="举报内容 : "+params.value[2]+'\n';
+    		//系列名称:seriesName: string  数据名，类目名 : name: string   传入的数据值:value: number|Array
+    		return s;
+	     },
+	     extraCssText:'width:200px; white-space:pre-wrap'//换行
+        //position:function (point, params, dom, rect, size){
+          //   return {top:"10%"}
+        //}
+    },
+    emphasis: {
+                shadowBlur: 5,
+                shadowColor: "#000000"
+            }
+    };
+        chart_bmap.setOption(option_bmap);
+        function fullscreen(e){
+           
+            
+            var opts = e.getOption()
+            bmap_div = document.getElementById("bmap")
+            if(bmap_div.style.width =="480px")
+                bmap_div.style.width = "98%"
+            else
+                bmap_div.style.width = "480px"
+            if(bmap_div.style.height == "370px")
+                bmap_div.style.height = "92%"
+            else
+                bmap_div.style.height = "370px"
+            var chart_bmap = echarts.init(
+            bmap_div, 'white', {renderer: 'canvas'})
+            chart_bmap.setOption(opts,true)
+            var bmap = chart_bmap.getModel().getComponent('bmap').getBMap();
+        bmap.addControl(new BMap.NavigationControl({"anchor": 0, "offset": {"width": 10, "height": 10}, "type": 0, "showZoomInfo": false, "enableGeolocation": false}));
+        bmap.addControl(new BMap.ScaleControl({"anchor": 2, "offset": {"width": 80, "height": 21}}));
+        bmap.addControl(new BMap.MapTypeControl({"anchor": 1, "type": 0}));
+            chart_bmap.resize();
+            //var bmap = chart_bmap.getModel().getComponent('bmap').getBMap();
+            //bmap.set
+            
+        }
+    
+        var bmap = chart_bmap.getModel().getComponent('bmap').getBMap();
+        bmap.addControl(new BMap.NavigationControl({"anchor": 0, "offset": {"width": 10, "height": 10}, "type": 0, "showZoomInfo": false, "enableGeolocation": false}));
+        bmap.addControl(new BMap.ScaleControl({"anchor": 2, "offset": {"width": 80, "height": 21}}));
+        bmap.addControl(new BMap.MapTypeControl({"anchor": 1, "type": 0}));   
+    </script>
+            
+    <script>
+        var chart_wordcloud = echarts.init(
+            document.getElementById('wordcloud'), 'white', {renderer: 'canvas'});
+        var option_wordcloud = {
+        tooltip: {
+        show: true
+    },
+    "series": [
+    {
+        textStyle: {
+            normal: {
+                color: function() {//设置随机颜色
+                    return 'rgb(' + [
+                        Math.round(Math.random() * 160),
+                        Math.round(Math.random() * 160),
+                        Math.round(Math.random() * 160)
+                    ].join(',') + ')';
+                }
+            },
+            emphasis: {
+                shadowBlur: 5,
+                shadowColor: '#333'
+            }
+        },
+            "type": "wordCloud",
+            "shape": "circle",
+            "rotationRange": [
+                -90,
+                90
+            ],
+            "rotationStep": 45,
+            "girdSize": 20,
+            "sizeRange": [
+                10,
+                100
+            ],
+            "data": {{wordcloud_data|safe}}
+            /*数据格式
+            [
+                {
+                    "name": "\u5316\u5de5\u5382",
+                    "value": 1,
+                    "textStyle": {
+                        "normal": {
+                            "color": "rgb(141,23,12)"
+                        }
+                    }
+                }
+            ]
+            */
+        }
+    ],
+};
+    //chart_wordcloud.setOption(option_wordcloud);    
+    </script> <br/>
+    <script>
+        var chart_line = echarts.init(
+            document.getElementById('line'), 'white', {renderer: 'canvas'});
+        var option_line = {
+        "series": [{
+            "type": "line",
+            "name": "\u4e3e\u62a5\u6570\u76ee",
+            "connectNulls": false,
+            "symbolSize": 4,
+            "showSymbol": true,
+            "smooth": true,
+            "step": false,
+            "data":{{line_data.y|safe}},
+            /*** 
+            [
+                [
+                    "1",
+                    283
+                ],
+            ],
+            ***/
+            "hoverAnimation": true,
+            "label": {
+                "show": true,
+                "position": "top",
+                "margin": 8
+            },
+            "lineStyle": {
+                "width": 1,
+                "opacity": 1,
+                "curveness": 0,
+                "type": "solid"
+            },
+            "areaStyle": {
+                "opacity": 0.5
+            },
+            "markLine": {
+                "silent": false,
+                "precision": 2,
+                "label": {
+                    "show": true,
+                    "position": "top",
+                    "margin": 8
+                },
+                "data": [
+                    {
+                        "type": "average"
+                    }
+                ]
+            },
+            "rippleEffect": {
+                "show": true,
+                "brushType": "stroke",
+                "scale": 2.5,
+                "period": 4
+            }
+        }],
+    "xAxis": [{
+            "name": "\u5e27",
+            "show": true,
+            "scale": false,
+            "nameLocation": "end",
+            "nameGap": 15,
+            "gridIndex": 0,
+            "inverse": false,
+            "offset": 0,
+            //"splitNumber": 5,
+            "boundaryGap": false,
+            "minInterval": 0,
+            "splitLine": {
+                "show": false,
+                "lineStyle": {
+                    "width": 1,
+                    "opacity": 1,
+                    "curveness": 0,
+                    "type": "solid"
+                }
+            },
+            "splitArea": {
+                "show": true,
+                "lineStyle": {
+                    "width": 1,
+                    "opacity": 1,
+                    "curveness": 0,
+                    "type": "solid"
+                }
+            },
+            "data":{{line_data.x|safe}},
+            /***
+             [
+                "1",
+                "2",
+                "3",
+                "4"
+            ]
+            ***/
+        }],
+    "yAxis": [
+        {
+            "name": "\u4e3e\u62a5\u6570\u76ee",
+            "show": true,
+            "scale": true,
+            "nameLocation": "end",
+            "nameGap": 15,
+            "gridIndex": 0,
+            "inverse": false,
+            "offset": 0,
+            "splitNumber": 5,
+            "minInterval": 0,
+            "splitLine": {
+                "show": true,
+                "lineStyle": {
+                    "width": 1,
+                    "opacity": 1,
+                    "curveness": 0,
+                    "type": "solid"
+                }
+            }
+        }
+    ],
+    "title": [
+        {}
+    ]
+};
+    chart_line.setOption(option_line);   
+    </script>            
+    <script>
+    var chart_themeriver = echarts.init(document.getElementById('themeriver'), 'white', {renderer: 'canvas'});    
+    var option_themeriver = {
+    "color":{{themeriver_color|safe}},
+    "series": [
+        {
+            "type": "themeRiver",
+            "itemStyle": {
+                emphasis: {
+                    shadowBlur: 20,
+                    shadowColor: 'rgba(0, 0, 0, 0.8)'
+                }
+            },
+            "data": {{themeriver_data|safe}},
+            /***数据格式
+            [
+                [
+                    "1",
+                    55,
+                    " 1 1.53 \u53f8\u673a \u5730\u70b9 \u8f66\u724c\u53f7 \u51fa\u79df\u8f66 \u4e58\u5ba2 \u591a\u6536\u8d39 \u62d2\u8f7d \u71c3\u6cb9\u8d39 \u7b49\u5019 \u53d1\u7968 \u7ed5\u8def \u76ee\u7684\u5730 \u91cc\u7a0b \u91d1\u989d \u6001\u5ea6 \u97f3\u9891 \u5c0f\u7968 \u71c3\u6cb9 \u8bc1\u636e \u6536\u8d39 \u9644\u52a0\u8d39 \u89c6\u9891 \u8f66\u724c \u51fa\u79df\u8f66\u62d2\u8f7d \u59d3\u540d "
+                ],
+               
+            ],
+            ***/
+            "label": {
+                "show": false,
+                "position": "top",
+                "margin": 8
+            },
+        }
+    ],
+    "legend": [
+        {
+            "type": "scroll",
+            "show": true,
+            "left": "72%",
+            //"top": "10%",
+            "orient": "vertical"
+        }
+    ],
+    "singleAxis": {
+        "min":1,
+        "right": "30%"
+    },
+    "title": [
+        {
+            "text": "\u4e8b\u4ef6\u94fe\u6cb3\u6d41\u56fe",
+            "subtext": "\u56fe\u4f8b\u6309\u7a81\u53d1\u6027\u7a0b\u5ea6\u964d\u5e8f\u6392\u5e8f"
+        }
+    ],
+    "tooltip": {
+        "show": true,
+        "trigger": "item",
+        "triggerOn": "mousemove|click",
+        formatter: '{b0}: {c0}<br />{b1}: {c1}'
+        /***
+       	formatter:function(params){
+    		var s='';
+    		s+="举报内容 : "+params.value+'\n';
+    		//系列名称:seriesName: string  数据名，类目名 : name: string   传入的数据值:value: number|Array
+    		return s;
+	     },
+         ***/
+    },
+    label:{show:true}
+};
+        chart_themeriver.setOption(option_themeriver);
+        chart_themeriver.on('legendselectchanged', function (params) {
+            // 获取点击图例的选中状态
+            //var isSelected = params.selected[params.name];
+            // 在控制台中打印
+            //console.log((isSelected ? '选中了' : '取消选中了') + '图例' + params.name);
+            // 打印所有图例的状态
+            //console.log(params.selected);//可以获得图例的状态
+            var post_data = {}
+            post_data["lengend_status"] = params.selected//河流图的事件图例选中状态
+            post_data["reevent_process"] = false//是否要重新检测事件
+            $.post("/demo/event_chain",JSON.stringify(post_data),function(data,status){
+                //option_wordcloud.series[0].data = data.wordcloud_data//重新设置数据要在series[0]上设置
+                //chart_wordcloud.setOption(option_wordcloud)//设置词云图
+                option_bmap.series[0].data = data.bmap_data
+                chart_bmap.setOption(option_bmap)//设置地图
+                option_line.series[0].data = data.line_data.y
+                option_line.xAxis.data = data.line_data.x
+                chart_line.setOption(option_line)
+            });
+        });
+    </script><br/>    
+
+    </div>
+    
+    <script>
+        
+        var bmap = chart_bmap.getModel().getComponent('bmap').getBMap();
+        bmap.addEventListener("click", function(e){     
+            console.log("lat")
+        });
+        //如何保证有lat log还有矩形
+        function md(ev) {
+               if(ev.button!=2)
+                 return
+               //console.log(isfinish)
+               var oBox = document.getElementById("bmap_1");
+               console.log("mouse down")
+               ev = window.event || ev;
+                //1.获取按下的点
+               var x1 = ev.clientX - oBox.offsetLeft;
+               var y1 = ev.clientY - oBox.offsetTop; 
+                //2.创建div
+               var oDiv = document.createElement("div");
+               oDiv.setAttribute("id","myregion")
+               var c = oBox.children;
+               var i;
+               for (i = 0; i < c.length; i++) {
+                    if(c[i].id=="myregion"){
+                        oBox.replaceChild(oDiv,c[i])
+                        break
+                    }     
+                }
+                if(i==c.length){
+                    oBox.appendChild(oDiv)
+                    isfinish = true;
+                }
+                    
+                function mm(ev) {
+                   ev = window.event || ev;
+                   var x2 = ev.clientX - oBox.offsetLeft;
+                   var y2 = ev.clientY - oBox.offsetTop;
+                   //3.设置div的样式
+                   oDiv.style.left = (x2 > x1 ? x1 : x2) +"px"; 
+                   oDiv.style.top = (y2 > y1 ? y1 : y2) +"px";
+                   oDiv.style.width = Math.abs(x2-x1)+"px";
+                   oDiv.style.height =Math.abs(y2-y1)+"px";
+               }
+               oBox.onmousemove = mm
+               return false;  //解除在划动过程中鼠标样式改变的BUG
+           }
+        //var num_region = 0//框的个数
+        function select_option(){
+            var myoption = document.getElementById("event_mode").value
+            console.log("select my region")
+            console.log(myoption)
+            var oBox = document.getElementById("bmap");
+            if(myoption!="region"){//只有region模式才能选框
+                oBox.removeEventListener("mousedown",md,false)
+                console.log("remove md")
+                var c = oBox.children;
+                var i;
+                for (i = 0; i < c.length; i++) {
+                    if(c[i].id=="myregion"){
+                        oBox.removeChild(c[i])
+                        break
+                    }     
+                }
+                //oBox.removeEventListener("mousemove",mm)
+                return
+            }
+            console.log("select region")
+            
+           oBox.addEventListener("mousedown",md,false)
+           //在鼠标抬起后终止onmousemove事件
+           document.onmouseup =  function(ev) {
+               oBox.onmousemove = null;  
+           }
+            
+        }
+        window.onload = function () {//文档内容全部加载完触发事件
+            setDate();//cookie上的查询日期做为input日期
+            //select_option();
+        }
+        function setCookie() {//将当前的查询时间至于cookie
+              console.log("设置setCookie");
+              var  last_date_begin = document.getElementById("myDate_begin").value
+              var  last_date_end = document.getElementById("myDate_end").value//这样获得value值
+              var  name = document.getElementById("myDate_end").getAttribute("name")
+              var is_chainidx = document.getElementById("chainIdx")
+              console.log(is_chainidx)
+              if(is_chainidx.value=="") //如果是查询具体的事件开新的页面
+                document.getElementById("parmform").setAttribute("target","")
+              else//否则不开新页面
+                document.getElementById("parmform").setAttribute("target","_blank")
+              document.cookie = "date_begin"+"="+last_date_begin+";"
+              document.cookie = "date_end"+"="+last_date_end+";"
+              return true
+        }
+        function setDate(){
+            var last_begin = getCookie("date_begin")//从cookie中获取数据,加载的时候
+            var last_end = getCookie("date_end")
+            console.log("cookie information")
+            console.log(last_begin)
+            console.log(last_end)
+            if(last_begin=="")
+                last_begin = "2015-11-10"
+            document.getElementById("myDate_begin").setAttribute("value",last_begin)
+            if(last_end=="")
+                last_end = "2015-11-12"
+            document.getElementById("myDate_end").setAttribute("value",last_end)
+        }
+        function getCookie(cname){
+            var name = cname + "=";
+            var ca = document.cookie.split(';');
+            for(var i=0; i<ca.length; i++) 
+            {
+                var c = ca[i].trim();
+                if (c.indexOf(name)==0) return c.substring(name.length,c.length);
+            }
+            return "";
+        }
+    </script>
+</body>
+</html>

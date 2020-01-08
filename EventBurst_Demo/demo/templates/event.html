@@ -1,0 +1,454 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>天津城市突发性事件预警系统</title>
+        <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="{% static 'clusters/bootstrap.min.css' %}"> 
+        <script type="text/javascript" src="{% static 'clusters/bootstrap.min.js' %}"></script>
+        <link rel="stylesheet" type="text/css" href="{% static 'clusters/index.css' %}"> 
+        <script type="text/javascript" src="https://assets.pyecharts.org/assets/echarts.min.js"></script>
+        <script type="text/javascript" src="https://assets.pyecharts.org/assets/bmap.min.js"></script>
+        <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=HOTBRAfU1jGcQKHBX15ucKsfZO722eyN"></script>
+        <script type="text/javascript" src="http://api.map.baidu.com/getscript?v=2.0&ak=HOTBRAfU1jGcQKHBX15ucKsfZO722eyN"></script>
+        <script type="text/javascript" src="https://assets.pyecharts.org/assets/echarts-wordcloud.min.js"></script>    
+        <script type="text/javascript" src="{% static 'clusters/jquery.min.js' %}"></script>
+        <style>
+        h1{
+            font-size:20px;
+        }
+        </style>
+</head>
+<body>
+    <div class="jumbotron well bg-dark"><!--index.css中可以设置其大小-->  
+        <h1 align="center" class="text-light">
+            天津城市突发性事件预警系统 
+        </h1>
+    </div>
+    <style>.box {  }; </style>
+    <div class="box">
+        <div id="bmap" class="chart-container border" style="z-index:10;width:480px; height:370px; top:65px; left:10px;position: absolute;" ></div>
+        <div id="line" class="chart-container border" style="width:480px; height:370px; top:65px; left:500px;position: absolute;">
+        </div>
+        <div id="wordcloud_line" class="chart-container border" style="width:970px; height:350px; top:440px; left:10px; position: absolute;"></div>
+    <script>
+        var chart_map_event = echarts.init(
+            document.getElementById('bmap'), 'white', {renderer: 'canvas'});
+            var chart_bmap = echarts.init(
+            document.getElementById('bmap'), 'white', {renderer: 'canvas'});
+    var option_bmap = {
+    "series": [
+        {
+            "type": "scatter",
+            "name": "举报坐标",
+            "coordinateSystem": "bmap",
+            "symbolSize": 6,
+            "data": {{ bmap_data|safe }},
+            /***
+            "data":[
+                {
+                    
+                    "value": [
+                        117.136015,
+                        39.092334,  
+                    ]
+                }
+            ],
+        ***/
+        }
+    ],
+    toolbox: {
+        feature: {
+            myTool1: {
+                show: true,
+                title: '地图全屏',
+                icon: 'path://M432.45,595.444c0,2.177-4.661,6.82-11.305,6.82c-6.475,0-11.306-4.567-11.306-6.82s4.852-6.812,11.306-6.812C427.841,588.632,432.452,593.191,432.45,595.444L432.45,595.444z M421.155,589.876c-3.009,0-5.448,2.495-5.448,5.572s2.439,5.572,5.448,5.572c3.01,0,5.449-2.495,5.449-5.572C426.604,592.371,424.165,589.876,421.155,589.876L421.155,589.876z M421.146,591.891c-1.916,0-3.47,1.589-3.47,3.549c0,1.959,1.554,3.548,3.47,3.548s3.469-1.589,3.469-3.548C424.614,593.479,423.062,591.891,421.146,591.891L421.146,591.891zM421.146,591.891',
+                onclick: fullscreen,
+            },
+        },
+      "right":"10px",
+      "bottom":"10px",
+    },
+    "bmap": {
+        "center": [
+            117.2,
+            39.12
+        ],
+        "zoom": 10,
+        "roam": false
+        },
+    "tooltip": {
+        "show": true,
+        "trigger": "item",
+        "triggerOn": "mousemove|click",
+        "axisPointer": {
+            "type": "line"
+        },
+        "textStyle": {
+            "fontSize": 14
+        },
+        "borderWidth": 0,
+       	formatter:function(params){
+    		var s='';
+    		s+="举报内容 : "+params.value[2]+'\n';
+    		//系列名称:seriesName: string  数据名，类目名 : name: string   传入的数据值:value: number|Array
+    		return s;
+	     },
+	     extraCssText:'width:200px; white-space:pre-wrap'//换行
+        //position:function (point, params, dom, rect, size){
+          //   return {top:"10%"}
+        //}
+    },
+    emphasis: {
+                shadowBlur: 5,
+                shadowColor: "#000000"
+            }
+    };
+        chart_bmap.setOption(option_bmap);
+        
+        var bmap = chart_bmap.getModel().getComponent('bmap').getBMap();
+        bmap.addControl(new BMap.NavigationControl({"anchor": 0, "offset": {"width": 10, "height": 10}, "type": 0, "showZoomInfo": false, "enableGeolocation": false}));
+        bmap.addControl(new BMap.ScaleControl({"anchor": 2, "offset": {"width": 80, "height": 21}}));
+        bmap.addControl(new BMap.MapTypeControl({"anchor": 1, "type": 0}));  
+        function fullscreen(e){
+           
+            
+           var opts = e.getOption()
+           bmap_div = document.getElementById("bmap")
+           if(bmap_div.style.width =="480px"){
+            bmap_div.style.width = "98%"
+            bmap_div.style.height = "90%"
+            var chart_bmap = echarts.init(
+           bmap_div, 'white', {renderer: 'canvas'})
+           chart_bmap.setOption(opts,true)
+           var bmap = chart_bmap.getModel().getComponent('bmap').getBMap();
+        bmap.addControl(new BMap.NavigationControl({"anchor": 0, "offset": {"width": 10, "height": 10}, "type": 0, "showZoomInfo": false, "enableGeolocation": false}));
+        bmap.addControl(new BMap.ScaleControl({"anchor": 2, "offset": {"width": 80, "height": 21}}));
+        bmap.addControl(new BMap.MapTypeControl({"anchor": 1, "type": 0}));  
+           chart_bmap.resize(); 
+           }
+           else{
+            bmap_div.style.width = "480px"
+            bmap_div.style.height = "370px"
+            var chart_bmap = echarts.init(
+           bmap_div, 'white', {renderer: 'canvas'})
+           chart_bmap.setOption(opts,true)
+           var bmap = chart_bmap.getModel().getComponent('bmap').getBMap();
+        bmap.addControl(new BMap.NavigationControl({"anchor": 0, "offset": {"width": 10, "height": 10}, "type": 0, "showZoomInfo": false, "enableGeolocation": false}));
+        bmap.addControl(new BMap.ScaleControl({"anchor": 2, "offset": {"width": 80, "height": 21}}));
+        bmap.addControl(new BMap.MapTypeControl({"anchor": 1, "type": 0}));
+           chart_bmap.resize();
+           }
+               
+           
+               
+           
+           //var bmap = chart_bmap.getModel().getComponent('bmap').getBMap();
+           //bmap.set
+           
+       } 
+    </script>
+    <script>
+        var chart_line = echarts.init(
+            document.getElementById('line'), 'white', {renderer: 'canvas'});
+        var option_line = {
+        "series": [{
+            "type": "line",
+            "name": "\u4e3e\u62a5\u6570\u76ee",
+            "connectNulls": false,
+            "symbolSize": 4,
+            "showSymbol": true,
+            "smooth": true,
+            "step": false,
+            "data":{{line_data.y|safe}},
+            /*** 
+            [
+                [
+                    "1",
+                    283
+                ],
+            ],
+            ***/
+            "hoverAnimation": true,
+            "label": {
+                "show": true,
+                "position": "top",
+                "margin": 8
+            },
+            "lineStyle": {
+                "width": 1,
+                "opacity": 1,
+                "curveness": 0,
+                "type": "solid"
+            },
+            "areaStyle": {
+                "opacity": 0.5
+            },
+            "markLine": {
+                "silent": false,
+                "precision": 2,
+                "label": {
+                    "show": true,
+                    "position": "top",
+                    "margin": 8
+                },
+                "data": [
+                    {
+                        "type": "average"
+                    }
+                ]
+            },
+            "rippleEffect": {
+                "show": true,
+                "brushType": "stroke",
+                "scale": 2.5,
+                "period": 4
+            }
+        }],
+    "xAxis": [{
+            "name": "\u5e27",
+            "show": true,
+            "scale": false,
+            "nameLocation": "end",
+            "nameGap": 15,
+            "gridIndex": 0,
+            "inverse": false,
+            "offset": 0,
+            //"splitNumber": 5,
+            "boundaryGap": false,
+            "minInterval": 0,
+            "splitLine": {
+                "show": false,
+                "lineStyle": {
+                    "width": 1,
+                    "opacity": 1,
+                    "curveness": 0,
+                    "type": "solid"
+                }
+            },
+            "splitArea": {
+                "show": true,
+                "lineStyle": {
+                    "width": 1,
+                    "opacity": 1,
+                    "curveness": 0,
+                    "type": "solid"
+                }
+            },
+            "data":{{line_data.x|safe}},
+            /***
+             [
+                "1",
+                "2",
+                "3",
+                "4"
+            ]
+            ***/
+        }],
+    "yAxis": [
+        {
+            "name": "\u4e3e\u62a5\u6570\u76ee",
+            "show": true,
+            "scale": true,
+            "nameLocation": "end",
+            "nameGap": 15,
+            "gridIndex": 0,
+            "inverse": false,
+            "offset": 0,
+            "splitNumber": 5,
+            "minInterval": 0,
+            "splitLine": {
+                "show": true,
+                "lineStyle": {
+                    "width": 1,
+                    "opacity": 1,
+                    "curveness": 0,
+                    "type": "solid"
+                }
+            }
+        }
+    ],
+    "title": [
+        {}
+    ]
+    };
+    chart_line.setOption(option_line);   
+    </script>            
+    <script>
+    var chart_wordcloud_line = echarts.init(
+        document.getElementById('wordcloud_line'), 'white', {renderer: 'canvas'});    
+        var option_wordcloud_line = {
+    "baseOption": {
+        "series": [
+            {
+                "type": "wordCloud",
+                "shape": "circle",
+                "rotationRange": [
+                    -90,
+                    90
+                ],
+                "rotationStep": 45,
+                "girdSize": 20,
+                "sizeRange": [
+                    1,
+                    100
+                ],
+                "data": [],
+                textStyle: {
+            normal: {
+                color: function() {//设置随机颜色
+                    return 'rgb(' + [
+                        Math.round(Math.random() * 160),
+                        Math.round(Math.random() * 160),
+                        Math.round(Math.random() * 160)
+                    ].join(',') + ')';
+                }
+            },
+            emphasis: {
+                shadowBlur: 2,
+                shadowColor: '#333'
+            }
+        },
+            }
+        ],
+        "timeline": {
+            "axisType": "category",
+            "orient": "horizontal",
+            "autoPlay": false,
+            "loop": true,
+            "rewind": false,
+            "show": true,
+            "inverse": false,
+            "bottom": "-5px",
+            "data": {{timeline_x|safe}},//['x1','x2']
+            "currentIndex":{{timeline_idx|safe}}
+        },
+        "tooltip": {
+                "show": true,
+                "trigger": "item",
+                "triggerOn": "mousemove|click",
+                "axisPointer": {
+                    "type": "line"
+                },
+                "textStyle": {
+                    "fontSize": 14
+                },
+                "borderWidth": 0
+            },       
+    },
+    "options":{{wordcloud_data|safe}}
+    /*** [
+        
+        {
+            "series": [
+                {
+                    "data": [
+                        {
+                            "name": "88",
+                            "value": 79,
+                        },
+                        {
+                            "name": "日本--",
+                            "value": 59,
+                        },
+                        {
+                            "name": "--",
+                            "value": 99,
+                        }]
+                }
+            ],    
+        },
+        {
+            "series": [
+                {
+                    "data": [
+                        {
+                            "name": "\u51fa\u79df\u8f66",
+                            "value": 39,
+                        },  
+                    ]
+                }
+            ],            
+        }
+    ]***/
+}; 
+    chart_wordcloud_line.setOption(option_wordcloud_line);    
+    </script>
+<div class="container-fluid table-hover" style="top:720px;position: relative;">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <div class="border">
+                <table class="table table-bordered" style="font-size:11px">
+                  <thead>
+                    <tr>
+                      <th scope="col">ID</th>
+                      <th scope="col">日期</th>
+                      <th scope="col" width="60%">描述</th>
+                      <th scope="col">所属区域</th>
+                      <th scope="col">经度</th>
+                      <th scope="col">维度</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for sample in samples %}
+                      <tr>
+                          <th scope="row">{{ sample.report_id|safe }}</th>
+                          <td>{{ sample.report_date|safe }}</td>
+                          <td>{{ sample.report_text|safe }}</td>
+                          <td>{{ sample.report_region|safe }}</td>
+                          <td>{{ sample.report_lon|safe }}</td>
+                          <td>{{ sample.report_lat|safe }}</td>
+                      </tr>
+                    {% endfor %} 
+                  </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>    
+</div>
+    
+    <script>
+        
+        option_wordcloud_line.baseOption.timeline.currentIndex = //设置tl的位置
+        document.documentElement.scrollTop = //设置滚动的位置
+
+        chart_wordcloud_line.setOption(option_wordcloud_line);
+        chart_wordcloud_line.on('timelinechanged', function (timeLineIndex) { 
+            /***
+            var post_data = {}
+            post_data["timeLineIndex"] = timeLineIndex//河流图的事件图例选中状态
+            $.post("/demo/event_chain",JSON.stringify(post_data),function(data,status){
+                //option_wordcloud.series[0].data = data.wordcloud_data//重新设置数据要在series[0]上设置
+                //chart_wordcloud.setOption(option_wordcloud)//设置词云图
+                option_bmap.series[0].data = data.bmap_data
+                chart_bmap.setOption(option_bmap)//设置地图
+                option_line.series[0].data = data.line_data.y
+                option_line.xAxis.data = data.line_data.x
+                chart_line.setOption(option_line)
+            }); 
+            ***/
+
+            var myForm = document.createElement("form");  
+            myForm.method = "get";  
+            myForm.action = "/demo/event";    
+            var myInput = document.createElement("input"); //向服务器发送tl的idx 
+            myInput.setAttribute("name", "timelineIndex"); 
+            myInput.setAttribute("value",timeLineIndex.currentIndex);
+            myForm.appendChild(myInput); 
+            scTop = document.documentElement.scrollTop;
+            var myInput2 = document.createElement("input"); 
+            myInput2.setAttribute("name", "scrollTop"); 
+            myInput2.setAttribute("value",scTop);//有两个输入要两个input结点
+            myForm.appendChild(myInput2);   
+            document.body.appendChild(myForm);  
+            myForm.submit();  
+            document.body.removeChild(myForm); 
+
+           
+        });
+
+    </script>
+</body>
+</html>

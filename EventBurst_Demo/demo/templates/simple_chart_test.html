@@ -1,0 +1,32 @@
+{% import 'macro' as macro %}
+<!DOCTYPE html>
+<html>
+<head>   
+    <title>{{ chart.page_title }}</title>
+    {{ macro.render_chart_dependencies(chart) }}
+</head>
+<body>
+    <h1 align="center" class="text-light" style="background:rgb(53,58,64)">
+            <font color="white" size="6"> 天津市城市突发性事件预警系统</font>
+    </h1>
+    
+    <form action="/demo" method="get">
+        <fieldset>
+            <legend>参数信息</legend>
+            起始时间 <input type="date" id="myDate" value="2015-07-01" name="date_begin">
+            结束时间 <input type="date" id="myDate" value="2015-07-10" name="date_end">
+            时间间隔 <input type="range" id="myRange" name="interval" defaultValue=24 min=1 max=24 step=1 οninput="change()" οnchange="change()">
+            <span id="value">24</span>
+            <script type='text/javascript'>
+                function change() {
+                      console.log("he")
+                      var value = document.getElementById('myRange').value ;
+                      document.getElementById('value').innerHTML = value;
+                }
+            </script>
+            <input type="submit" value="运行">
+        </fieldset>
+    </form>
+    {{ macro.render_chart_content(chart) }}
+</body>
+</html>
