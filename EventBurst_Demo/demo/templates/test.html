@@ -32,7 +32,7 @@
 <div class="jumbotron well bg-dark row"><!--index.css中可以设置其大小-->  
     <div class="col-md-11">
         <h1 align="center" class="text-light">
-            天津城市突发性事件预警系统 
+            天津市城市突发事件预警系统 
         </h1>
     </div>
     <div class="col-md-1" >
@@ -78,7 +78,7 @@
          <div class="form-group ">
          <label class="col-sm-4 control-label" for="ds_host">事件类型</label>
         <div class="col-sm-8">
-           <select class="form-control" id="event_mode" onchange="select_option()" >
+           <select class="form-control" id="event_mode" onchange="select_option()" name = "options">
               <option value="globalEvent">全局事件</option>
               <option value="localEvent">局部事件</option>
               <option value="region">自选区域</option>
@@ -89,6 +89,10 @@
         <div >
             <input class="btn btn-default" id="ds_host" type="submit" value="运行" style="left:40%;position: relative;"/>   
         </div>
+        <input id="lng1" type="hidden" value="" name="lng1" /> 
+        <input id="lng2" type="hidden" value="" name="lng2" />
+        <input id="lat1" type="hidden" value="" name="lat1" />
+        <input id="lat2" type="hidden" value="" name="lat2" />
         </div>
     </form>
 </div>
@@ -123,6 +127,7 @@
         <div id="wordcloud" class="chart-container " style="width:470px; height:370px; top:100px; left:630px; position: absolute;" ></div>
         <div id="line" class="chart-container border" style="width:480px; height:370px; top:65px; left:500px;position: absolute;"></div>
         <div id="themeriver" class="chart-container border" style="width:970px; height:380px; top:440px; left:10px;position: absolute;"></div>
+        
     <script>
         
         var chart_bmap = echarts.init(
@@ -426,16 +431,6 @@
                 }
             },
             "data": {{themeriver_data|safe}},
-            /***数据格式
-            [
-                [
-                    "1",
-                    55,
-                    " 1 1.53 \u53f8\u673a \u5730\u70b9 \u8f66\u724c\u53f7 \u51fa\u79df\u8f66 \u4e58\u5ba2 \u591a\u6536\u8d39 \u62d2\u8f7d \u71c3\u6cb9\u8d39 \u7b49\u5019 \u53d1\u7968 \u7ed5\u8def \u76ee\u7684\u5730 \u91cc\u7a0b \u91d1\u989d \u6001\u5ea6 \u97f3\u9891 \u5c0f\u7968 \u71c3\u6cb9 \u8bc1\u636e \u6536\u8d39 \u9644\u52a0\u8d39 \u89c6\u9891 \u8f66\u724c \u51fa\u79df\u8f66\u62d2\u8f7d \u59d3\u540d "
-                ],
-               
-            ],
-            ***/
             "label": {
                 "show": false,
                 "position": "top",
@@ -447,14 +442,16 @@
         {
             "type": "scroll",
             "show": true,
-            "left": "72%",
+            "left": "70%",
+            "icon":"circle",
             //"top": "10%",
             "orient": "vertical"
-        }
+        },
     ],
     "singleAxis": {
         "min":1,
-        "right": "30%"
+        "max":{{num_frames|safe}},
+        "right": "32%"
     },
     "title": [
         {
@@ -467,14 +464,6 @@
         "trigger": "item",
         "triggerOn": "mousemove|click",
         formatter: '{b0}: {c0}<br />{b1}: {c1}'
-        /***
-       	formatter:function(params){
-    		var s='';
-    		s+="举报内容 : "+params.value+'\n';
-    		//系列名称:seriesName: string  数据名，类目名 : name: string   传入的数据值:value: number|Array
-    		return s;
-	     },
-         ***/
     },
     label:{show:true}
 };
@@ -506,15 +495,30 @@
     <script>
         
         var bmap = chart_bmap.getModel().getComponent('bmap').getBMap();
-        bmap.addEventListener("click", function(e){     
-            console.log("lat")
+        bmap.addEventListener("click", function(e){ 
+            //e.point.lat or e.point.lng
+            console.log(e.point.lat)    
+            lng1 = document.getElementById("lng1")
+            lng2 = document.getElementById("lng2")
+            lat1 = document.getElementById("lat1")
+            lat2 = document.getElementById("lat2")
+            if(lng1.value!="")
+                lng2.value = e.point.lng
+            else
+                lng1.value = e.point.lng
+            
+            if(lat1.value!="")
+                lat2.value=e.point.lat
+            else
+                lat1.value=e.point.lat
+
         });
         //如何保证有lat log还有矩形
         function md(ev) {
                if(ev.button!=2)
                  return
                //console.log(isfinish)
-               var oBox = document.getElementById("bmap_1");
+               var oBox = document.getElementById("bmap");
                console.log("mouse down")
                ev = window.event || ev;
                 //1.获取按下的点

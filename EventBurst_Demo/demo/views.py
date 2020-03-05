@@ -15,7 +15,7 @@ from pyecharts.faker import Collector, Faker
 from pyecharts.globals import ThemeType
 from pyecharts.components import Table
 from pyecharts.options import ComponentTitleOpts
-import os
+import os,math
 #import sys
 #sys.path.append("..")
 from mycommunity.process import Process
@@ -348,7 +348,13 @@ def process_data(frames,chains,bursty_dict,colors_table,lengend_status=None):#�
                     pos_idx += 1
             continue
         chain = v#[{},{},{}] ...
-        abstract = " "+str(idx)+" "+str(round(bursty_dict[k],2))+" "  #每条事件链的摘要
+        if(bursty_dict[k]>0):
+            bursty_level = math.ceil(bursty_dict[k])
+        else:
+            bursty_level = math.floor(bursty_dict[k])
+        if(bursty_level>5):bursty_level = 5
+        if(bursty_level<-5):bursty_level = -5
+        abstract = " "+str(idx)+"  "+"级别: "+str(bursty_level)+"  "  #每条事件链的摘要
         idx+=1
         temp = []
         for e in chain:#事件链上的每个结点
@@ -395,7 +401,33 @@ def process_data(frames,chains,bursty_dict,colors_table,lengend_status=None):#�
     words = list(wordcloud_data.items())
     return line_data,themeriver_data,themreiver_lengend,pos,words
 
-def preprocess_chains(chains,global_event=True):
+def get_GridId(lon,lat,gridSize=1,event_type="localEvent"):
+    #输入经度和维度返回格子ID坐标
+    ID = ""
+    if(event_type=="localEvent"):
+        num_x = 117/gridSize#东西1KM一格
+        num_y = 189/gridSize#南北1KM一格
+        lon_begin = 116.71666666666667#经度 东西
+        lon_end = 118.06666666666666
+        lat_begin = 38.5666666666666
+        lat_end = 40.25
+        lat_gap = (lat_end - lat_begin)/num_y
+        lon_gap = (lon_end - lon_begin)/num_x#每格的大小还是这么大
+        y = math.floor((lat - lat_begin)/lat_gap)
+        x = math.floor((lon - lon_begin)/lon_gap)
+        ID = str(x)+"_"+str(y)
+        
+    else:
+        lng1 = leftConer[0]
+        lat1 = leftConer[1]
+        lng2 = rightConer[0]
+        lat2 = rightConer[1]
+        if(lng1<=lon and lon<=lng2 and lat<=lat1 and lat>=lat2):
+            ID= "HIT"
+    return ID
+
+def preprocess_chains(chains,event_type="globalEvent",myGridSize = 1):
+    #chains = {key:[{event dicttype}]}
     #chains : {key[{},{},{}]}
     #global_event : 是全局还是局部事件
     #返回按bursty排序的chain 和一bursty数组
@@ -405,10 +437,55 @@ def preprocess_chains(chains,global_event=True):
     即对事件链的d分配到map的各grid,如果chain_key+grid_key一样就往链上加增加结果，否则构成新链
     chain_key+grid_key是新链的key
     '''
+    chains_temp = {}
+    if(event_type=="localEvent" or event_type=="region"):
+        for k,v in chains.items():
+            chain = v
+            for e in chain:
+                temp = {}
+                lats = e["community_lats"]
+                lons = e["community_lons"]
+                #docs = e["community_docs"]
+                keywords = e["community_keywords"]#array["","",""]
+                regions = e["community_regions"]
+                dates = e["community_dates"]
+                contents = e["community_contents"]
+                frameId = e["community_frameid"]
+                for i in range(len(lats)):
+                    docPosID = get_GridId(lons[i],lats[i],gridSize = myGridSize,event_type=event_type)
+                    if(docPosID==""):continue
+                    newChainKey = k+"_"+docPosID
+                    if(newChainKey not in temp.keys()):
+                        temp[newChainKey]={"community_lats":[],
+                                           "community_lons":[],
+                                           "community_frameid":frameId,
+                                           "community_keywords":[],
+                                           "community_regions":[],
+                                           "community_dates":[],  
+                                           "community_contents":[]}
+                    temp[newChainKey]["community_lats"].append(lats[i])
+                    temp[newChainKey]["community_lons"].append(lons[i])
+                    #temp[newChainKey]["community_frameid"].append(frameIDs[i])
+                    #temp[newChainKey]["community_docs"].append(docs[i]) 
+                    temp[newChainKey]["community_keywords"].append(keywords[i])
+                    temp[newChainKey]["community_regions"].append(regions[i])  
+                    temp[newChainKey]["community_dates"].append(dates[i]) 
+                    temp[newChainKey]["community_contents"].append(contents[i])
+                for key,value in temp.items():
+                    value["community_docs"] = len(value["community_lons"])
+                    #value["community_frameid"] = 
+                    if key not in chains_temp.keys():
+                        chains_temp[key]=[value]  
+                    else:
+                        chains_temp[key].append(value)
+    if(event_type=="localEvent" or event_type=="region"):
+        chains = chains_temp         
+
     #根据bursty程度对key排序然后遍历
     bursty_dict = {}
     new_chains = {}
     for k,v in chains.items():
+        '''对事件链按突发性程度排序'''
         temp = []
         chain = v
         for e in chain:
@@ -424,7 +501,11 @@ def preprocess_chains(chains,global_event=True):
                 bursty_dict[k] = 0
         else:
             bursty_dict[k] = 0
-    bursty_dict = dict(sorted(bursty_dict.items(), key=lambda d: d[1],reverse=True))#安value排序
+    bursty_dict = sorted(bursty_dict.items(), key=lambda d: d[1],reverse=True)#安value排序
+    if(event_type=="localEvent" or event_type=="region"):
+        if(len(bursty_dict)>20):
+            bursty_dict = bursty_dict[:20]
+    bursty_dict = dict(bursty_dict)
     for k,v in bursty_dict.items():
         new_chains[k] = chains[k]
     return new_chains,bursty_dict
@@ -437,6 +518,12 @@ date_end_old = ""
 timeInterval_old = -1
 bursty_dict = {}
 colors_table = []
+event_type = ""
+gridSize = 1
+leftConer = ()
+rightConer = ()
+event_type_old = ""
+leftConer_old = ""
 
 def event_chain_temp(request):
     global frames
@@ -486,7 +573,7 @@ def event_chain_temp(request):
     #line_data = frames
     #不论是全城还是局部事件都要对chain做预处理操作，并且只返回前top20的事件链
         chains = process.match(frames)
-    chains,bursty_dict = preprocess_chains(chains)#对chains做一些处理按bursty、glbal/local处理
+    chains,bursty_dict = preprocess_chains(chains,event_type)#对chains做一些处理按bursty、glbal/local处理
     date_begin_old = date_begin
     date_end_old = date_end
     timeInterval_old = timeInterval
@@ -692,6 +779,8 @@ def get_wordcloud_line(words,frame_ids)->Line:
         tl.add(wordcloud, "{}帧".format(i))#pycharts易展示，但不好交互
     return tl
 
+
+
 def process_chain(chain):
     line_data = {'x':[],'y':[]}
     poses=[]#[[(lo,loa),(lo,la)],[...]]
@@ -860,6 +949,12 @@ def event_chain(request):
     global timeInterval_old
     global bursty_dict
     global colors_table
+    global event_type
+    global gridSize
+    global leftConer
+    global rightConer
+    global event_type_old
+    global leftConer_old
     lengend_status = None
     is_ajax = False#如果是ajax 要重新计算
     #colors_table = getColor(24)
@@ -889,23 +984,39 @@ def event_chain(request):
             date_end = request.GET['date_end']+" "+"00:00:00"
             date_end = date_end.replace("-","/")
             print("dataend:{}".format(date_end))
+        if 'options' in request.GET and request.GET['options']:
+            print("哪种事件类型")
+            print(request.GET['options'])
+            event_type = request.GET['options']#确定事件类型 globalEvent or localEvent or region
+        if 'gridSize' in request.GET and request.GET['gridSize']:
+            print("gridSize")
+            print(request.GET['gridSize'])
+            gridSize = int(request.GET['gridSize'])
+        if 'lat1' in request.GET and request.GET['lat1'] and 'lat2' in request.GET and request.GET['lat2']:
+            leftConer = (float(request.GET['lng1']),float(request.GET['lat1']))
+            rightConer = (float(request.GET['lng2']),float(request.GET['lat2']))
 
         num_frames = int((time2timestamp(date_end)-time2timestamp(date_begin))/(3600*timeInterval))
         print("num_frames:{}".format(num_frames))
         #如果获得经度和维度,就可以在process.detect中删除不在这经度和维度范围内的数据 to do
-        if(date_begin_old!=date_begin or date_end_old !=date_end or timeInterval_old!=timeInterval):#如果有一个更新
+        if(date_begin_old!=date_begin or date_end_old !=date_end or timeInterval_old!=timeInterval or event_type_old!=event_type or leftConer_old!=leftConer):#如果有一个更新
             frames = process.detect(date_begin,3600*timeInterval,num_frames)
             chains = process.match(frames)
-            chains,bursty_dict = preprocess_chains(chains)#对chains做一些处理按bursty、glbal/local处理
+            chains,bursty_dict = preprocess_chains(chains,event_type=event_type,myGridSize=gridSize)#对chains做一些处理按bursty、glbal/local处理
+            #针对事件类型应该再对事件链处理
+            #chains,bursty_dict = processChainsByType(chains,event_type)
             colors_table = getColor(len(chains))#每条事件链都用不同的颜色标注
             #不论是全城还是局部事件都要对chain做预处理操作，并且只返回前top20的事件链
         date_begin_old = date_begin
         date_end_old = date_end
         timeInterval_old = timeInterval
+        event_type_old = event_type
+        leftConer_old = leftConer
 
     line_data,themeriver_data,themeriver_lengend, pos,words = process_data(frames,chains,bursty_dict,colors_table,lengend_status)
     wordcloud_data = []
     bmap_data = []
+    bursty_color = []
     for i in range(len(line_data['y'])):
         y_temp = line_data['y'][i]
         x_temp = line_data['x'][i]
@@ -914,12 +1025,18 @@ def event_chain(request):
         wordcloud_data.append({"name":i[0],"value":i[1]})
     for i in pos:
         bmap_data.append({"name":i[0],"value":[i[2],i[1],i[4]],"itemStyle":{"color":i[3]}})
-
+    for i in range(len(chains)):
+        c = colors_table[i]
+        temp = {"backgroundColor":c}
+        bursty_color.append(temp)
+    print(len(colors_table))
     context = {"bmap_data":json.dumps(bmap_data),#用json将其转为字符串，同时模板中加入通道 | safe
                "wordcloud_data":json.dumps(wordcloud_data),
                "themeriver_data":json.dumps(themeriver_data),
                "line_data":line_data,#好像对于字典这样的数据不用json.dumps啊
                "themeriver_color":json.dumps(colors_table),
+               "bursty_color":bursty_color,
+               "num_frames":len(frames),
                "mytitle":"天津城市突发性事件预警系统——NEW"}
     if request.is_ajax():
         data = {

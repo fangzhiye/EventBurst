@@ -223,6 +223,16 @@ class Community_Detecion:
         return (rand_score,info_score,v_measure_score,mallows_score)
 
     #python-louvain
+    def getRealDocs(self,keywords):
+        #keywords = ret_df['KEY_WORDS']
+        real_doc = 0
+        for i in range(len(keywords)):
+            ks = keywords[i].split(" ")
+            if("漏雨" in ks or "漏水" in ks or "积水" in ks or "排水" in ks):
+                real_doc+=1
+        return real_doc
+
+
     def graph_partition(self,G,ret_df):
         m,n = ret_df.shape
         keywords = ret_df['KEY_WORDS']
@@ -264,6 +274,7 @@ class Community_Detecion:
             labels_pred[com_members] = com_id#同一个社区的文档预测的是同一个id
 
         scores = self.Eva_Metric(self.labels_true,labels_pred)
+        print(self.getRealDocs(list(keywords)))
         #print(scores)
         return comm_dict,scores 
 #%%
